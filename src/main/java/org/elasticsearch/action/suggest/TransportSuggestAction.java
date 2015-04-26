@@ -42,6 +42,7 @@ import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.suggest.stats.ShardSuggestService;
 import org.elasticsearch.indices.IndicesService;
+import org.elasticsearch.search.fields.IncludeFieldService;
 import org.elasticsearch.search.suggest.Suggest;
 import org.elasticsearch.search.suggest.SuggestPhase;
 import org.elasticsearch.search.suggest.SuggestionSearchContext;
@@ -67,8 +68,9 @@ public class TransportSuggestAction extends TransportBroadcastOperationAction<Su
 
     @Inject
     public TransportSuggestAction(Settings settings, ThreadPool threadPool, ClusterService clusterService, TransportService transportService,
-                                  IndicesService indicesService, SuggestPhase suggestPhase, ActionFilters actionFilters) {
-        super(settings, SuggestAction.NAME, threadPool, clusterService, transportService, actionFilters);
+                                  IndicesService indicesService, SuggestPhase suggestPhase, ActionFilters actionFilters,
+                                  IncludeFieldService includeFieldService) {
+        super(settings, SuggestAction.NAME, threadPool, clusterService, transportService, actionFilters, includeFieldService);
         this.indicesService = indicesService;
         this.suggestPhase = suggestPhase;
     }

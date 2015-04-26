@@ -38,6 +38,7 @@ import org.elasticsearch.index.get.GetResult;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.indices.IndicesService;
+import org.elasticsearch.search.fields.IncludeFieldService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -51,8 +52,9 @@ public class TransportGetAction extends TransportShardSingleOperationAction<GetR
 
     @Inject
     public TransportGetAction(Settings settings, ClusterService clusterService, TransportService transportService,
-                              IndicesService indicesService, ThreadPool threadPool, ActionFilters actionFilters) {
-        super(settings, GetAction.NAME, threadPool, clusterService, transportService, actionFilters);
+                              IndicesService indicesService, ThreadPool threadPool, ActionFilters actionFilters,
+                              IncludeFieldService includeFieldService) {
+        super(settings, GetAction.NAME, threadPool, clusterService, transportService, actionFilters, includeFieldService);
         this.indicesService = indicesService;
 
         this.realtime = settings.getAsBoolean("action.get.realtime", true);

@@ -20,7 +20,6 @@
 package org.elasticsearch.action.support.single.shard;
 
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.IndicesRequest;
@@ -42,6 +41,7 @@ import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.shard.ShardId;
+import org.elasticsearch.search.fields.IncludeFieldService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.*;
 
@@ -58,13 +58,16 @@ public abstract class TransportShardSingleOperationAction<Request extends Single
 
     protected final TransportService transportService;
 
+    protected final IncludeFieldService includeFieldService;
+
     final String transportShardAction;
     final String executor;
 
-    protected TransportShardSingleOperationAction(Settings settings, String actionName, ThreadPool threadPool, ClusterService clusterService, TransportService transportService, ActionFilters actionFilters) {
+    protected TransportShardSingleOperationAction(Settings settings, String actionName, ThreadPool threadPool, ClusterService clusterService, TransportService transportService, ActionFilters actionFilters, IncludeFieldService includeFieldService) {
         super(settings, actionName, threadPool, actionFilters);
         this.clusterService = clusterService;
         this.transportService = transportService;
+        this.includeFieldService = includeFieldService;
 
         this.transportShardAction = actionName + "[s]";
         this.executor = executor();
@@ -192,16 +195,24 @@ public abstract class TransportShardSingleOperationAction<Request extends Single
                             @Override
                             public void run() {
                                 try {
+                                    includeFieldService.prepare(internalRequest.concreteIndex(), internalRequest.request.index());
                                     Response response = shardOperation(internalRequest.request(), shardRouting.shardId());
                                     listener.onResponse(response);
                                 } catch (Throwable e) {
                                     onFailure(shardRouting, e);
+                                } finally {
+                                    includeFieldService.clear();
                                 }
                             }
                         });
                     } else {
-                        final Response response = shardOperation(internalRequest.request(), shardRouting.shardId());
-                        listener.onResponse(response);
+                        try {
+                            includeFieldService.prepare(internalRequest.concreteIndex(), internalRequest.request.index());
+                            final Response response = shardOperation(internalRequest.request(), shardRouting.shardId());
+                            listener.onResponse(response);
+                        } finally {
+                            includeFieldService.clear();
+                        }
                     }
                 } catch (Throwable e) {
                     onFailure(shardRouting, e);
@@ -295,8 +306,13 @@ public abstract class TransportShardSingleOperationAction<Request extends Single
             if (logger.isTraceEnabled()) {
                 logger.trace("executing [{}] on shard [{}]", request.request(), request.shardId());
             }
-            Response response = shardOperation(request.request(), request.shardId());
-            channel.sendResponse(response);
+            try {
+                includeFieldService.prepare(request.shardId().getIndex(), request.request.index());
+                Response response = shardOperation(request.request(), request.shardId());
+                channel.sendResponse(response);
+            } finally {
+                includeFieldService.clear();
+            }
         }
     }
 

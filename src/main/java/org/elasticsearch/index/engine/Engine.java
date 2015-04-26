@@ -19,7 +19,6 @@
 
 package org.elasticsearch.index.engine;
 
-import com.google.common.collect.Sets;
 import org.apache.lucene.index.*;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
@@ -45,11 +44,14 @@ import org.elasticsearch.common.util.concurrent.ReleasableLock;
 import org.elasticsearch.index.VersionType;
 import org.elasticsearch.index.deletionpolicy.SnapshotDeletionPolicy;
 import org.elasticsearch.index.deletionpolicy.SnapshotIndexCommit;
-import org.elasticsearch.index.mapper.*;
+import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.ParseContext.Document;
+import org.elasticsearch.index.mapper.ParsedDocument;
+import org.elasticsearch.index.mapper.Uid;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.store.Store;
 import org.elasticsearch.index.translog.Translog;
+import org.elasticsearch.search.fields.IncludeFieldsContext;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -204,7 +206,7 @@ public abstract class Engine implements Closeable {
     public abstract void delete(DeleteByQuery delete) throws EngineException;
 
     final protected GetResult getFromSearcher(Get get) throws EngineException {
-        final Searcher searcher = acquireSearcher("get", get.includeFields());
+        final Searcher searcher = acquireSearcher("get");
         final Versions.DocIdAndVersion docIdAndVersion;
         try {
             docIdAndVersion = Versions.loadDocIdAndVersion(searcher.reader(), get.uid());
@@ -253,7 +255,7 @@ public abstract class Engine implements Closeable {
             *  in the catch block and throw the right exception */
             final IndexSearcher searcher = manager.acquire();
             try {
-                final Searcher retVal = newSearcher(source, searcher, manager);
+                final Searcher retVal = filterSearcher(newSearcher(source, searcher, manager));
                 success = true;
                 return retVal;
             } finally {
@@ -274,25 +276,15 @@ public abstract class Engine implements Closeable {
         }
     }
 
-    public final Searcher acquireSearcher(String source, FieldMapper<?>... includeFields) throws EngineException {
-        final Searcher searcher = acquireSearcher(source);
-        if (includeFields == null || includeFields.length == 0) {
+    final Searcher filterSearcher(final Searcher searcher) throws EngineException {
+        IncludeFieldsContext context = IncludeFieldsContext.current();
+        if (context == null) {
             return searcher;
         }
 
-        // We need to include the meta fields, otherwise features will stop working.
-        Set<String> indexedFieldNames = Sets.newHashSet(MapperService.getMetaFields());
-        // We need to exclude the _all field here, because that includes all a copy of all values from all fields.
-        // which would break the filtering by field
-        indexedFieldNames.remove("_all");
-        Set<String> fullFieldNames = new HashSet<>();
-        for (FieldMapper field : includeFields) {
-            indexedFieldNames.add(field.names().indexName());
-            fullFieldNames.add(field.names().fullName());
-        }
         try {
-            DirectoryReader filter = FieldSubsetReader.wrap((DirectoryReader) searcher.searcher().getIndexReader(), indexedFieldNames, fullFieldNames);
-            return new Engine.Searcher(source, new IndexSearcher(filter)) {
+            DirectoryReader filter = FieldSubsetReader.wrap((DirectoryReader) searcher.searcher().getIndexReader(), context.getIndexedFieldNames(), context.getFullFieldNames());
+            return new Engine.Searcher(searcher.source(), new IndexSearcher(filter)) {
 
                 @Override
                 public void close() throws ElasticsearchException {
@@ -960,8 +952,6 @@ public abstract class Engine implements Closeable {
         private boolean loadSource = true;
         private long version = Versions.MATCH_ANY;
         private VersionType versionType = VersionType.INTERNAL;
-        private String indexOrAlias;
-        private FieldMapper<?>[] includeFields;
 
         public Get(boolean realtime, Term uid) {
             this.realtime = realtime;
@@ -1000,24 +990,6 @@ public abstract class Engine implements Closeable {
 
         public Get versionType(VersionType versionType) {
             this.versionType = versionType;
-            return this;
-        }
-
-        public String indexOrAlias() {
-            return indexOrAlias;
-        }
-
-        public Get indexOrAlias(String indexOrAlias) {
-            this.indexOrAlias = indexOrAlias;
-            return this;
-        }
-
-        public FieldMapper<?>[] includeFields() {
-            return includeFields;
-        }
-
-        public Get includeFields(FieldMapper<?>[] includeFields) {
-            this.includeFields = includeFields;
             return this;
         }
     }

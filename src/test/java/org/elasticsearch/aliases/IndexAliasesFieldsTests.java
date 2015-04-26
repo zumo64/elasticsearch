@@ -20,6 +20,7 @@
 package org.elasticsearch.aliases;
 
 import org.elasticsearch.action.admin.indices.alias.Alias;
+import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -129,6 +130,29 @@ public class IndexAliasesFieldsTests extends ElasticsearchSingleNodeTest {
         response = client().prepareSearch("test").setQuery(matchQuery("field2", "value2")).get();
         assertHitCount(response, 1);
         response = client().prepareSearch("alias2").setQuery(matchQuery("field2", "value2")).get();
+        assertHitCount(response, 0);
+    }
+
+    @Test
+    public void testCountApi() throws Exception {
+        createIndex("test", client().admin().indices().prepareCreate("test")
+                        .addMapping("type1", "field1", "type=string", "field2", "type=string")
+                        .addAlias(new Alias("alias1").includeFields("field2"))
+        );
+        client().prepareIndex("test", "type1", "1").setSource("field1", "value1", "field2", "value2")
+                .setRefresh(true)
+                .get();
+
+        CountResponse response = client().prepareCount("test").setQuery(matchQuery("field1", "value1")).get();
+        assertHitCount(response, 1);
+        response = client().prepareCount("alias1").setQuery(matchQuery("field1", "value1")).get();
+        assertHitCount(response, 0);
+
+        client().admin().indices().prepareAliases().addAlias(new String[]{"test"}, "alias2", null, new AliasFieldsFiltering(new String[]{"field1"})).get();
+
+        response = client().prepareCount("test").setQuery(matchQuery("field2", "value2")).get();
+        assertHitCount(response, 1);
+        response = client().prepareCount("alias2").setQuery(matchQuery("field2", "value2")).get();
         assertHitCount(response, 0);
     }
 

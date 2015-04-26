@@ -81,6 +81,14 @@ public class TransportMultiGetAction extends HandledTransportAction<MultiGetRequ
                 continue;
             }
 
+            ShardId shardId = clusterService.operationRouting()
+                    .getShards(clusterState, concreteSingleIndex, item.type(), item.id(), item.routing(), null).shardId();
+            MultiGetShardRequest shardRequest = shardRequests.get(shardId);
+            if (shardRequest == null) {
+                shardRequest = new MultiGetShardRequest(request, shardId.index().name(), shardId.id());
+                shardRequests.put(shardId, shardRequest);
+            }
+
             if (concreteSingleIndex.equals(item.index()) == false) {
                 ImmutableOpenMap<String, ImmutableList<AliasMetaData>> result =  clusterState.getMetaData().findAliases(new String[]{item.index()}, new String[]{concreteSingleIndex});
                 if (result != null) {
@@ -89,17 +97,9 @@ public class TransportMultiGetAction extends HandledTransportAction<MultiGetRequ
                     AliasMetaData alias = aliases.get(0);
                     String[] filterByFields = alias.getFieldsFiltering().getIncludes();
                     if (filterByFields.length != 0) {
-                        request.realtime = false;
+                        shardRequest.realtime = false;
                     }
                 }
-            }
-
-            ShardId shardId = clusterService.operationRouting()
-                    .getShards(clusterState, concreteSingleIndex, item.type(), item.id(), item.routing(), null).shardId();
-            MultiGetShardRequest shardRequest = shardRequests.get(shardId);
-            if (shardRequest == null) {
-                shardRequest = new MultiGetShardRequest(request, shardId.index().name(), shardId.id());
-                shardRequests.put(shardId, shardRequest);
             }
             shardRequest.add(i, item);
         }

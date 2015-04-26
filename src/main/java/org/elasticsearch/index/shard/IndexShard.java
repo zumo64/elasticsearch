@@ -116,7 +116,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.channels.ClosedByInterruptException;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -552,11 +551,6 @@ public class IndexShard extends AbstractIndexShardComponent {
 
     public Engine.GetResult get(Engine.Get get) throws ElasticsearchException {
         readAllowed();
-        Set<FieldMapper<?>> includeFields = indexService.aliasesService().aliasFields(get.indexOrAlias());
-        if (includeFields.isEmpty() == false) {
-            assert get.realtime() == false : "realtime option is incompatible with includeFields option";
-            get.includeFields(includeFields.toArray(new FieldMapper[]{}));
-        }
         return engine().get(get);
     }
 
@@ -712,22 +706,9 @@ public class IndexShard extends AbstractIndexShardComponent {
         return acquireSearcher(source, false);
     }
 
-    public Engine.Searcher acquireSearcher(String source, String... aliases) {
-        if (aliases == null) {
-            return acquireSearcher(source);
-        }
-
-        Set<FieldMapper<?>> includeFields = indexService.aliasesService().aliasFields(aliases);
-        if (includeFields.isEmpty() == false) {
-            return acquireSearcher(source, false, includeFields.toArray(new FieldMapper[0]));
-        } else {
-            return acquireSearcher(source);
-        }
-    }
-
-    public Engine.Searcher acquireSearcher(String source, boolean searcherForWriteOperation, FieldMapper<?>... includeFields) {
+    public Engine.Searcher acquireSearcher(String source, boolean searcherForWriteOperation) {
         readAllowed(searcherForWriteOperation);
-        return engine().acquireSearcher(source, includeFields);
+        return engine().acquireSearcher(source);
     }
 
     public void close(String reason, boolean flushEngine) throws IOException {

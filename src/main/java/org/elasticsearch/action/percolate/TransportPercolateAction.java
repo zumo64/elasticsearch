@@ -40,6 +40,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.engine.DocumentMissingException;
 import org.elasticsearch.percolator.PercolateException;
 import org.elasticsearch.percolator.PercolatorService;
+import org.elasticsearch.search.fields.IncludeFieldService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -61,8 +62,8 @@ public class TransportPercolateAction extends TransportBroadcastOperationAction<
     @Inject
     public TransportPercolateAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
                                     TransportService transportService, PercolatorService percolatorService,
-                                    TransportGetAction getAction, ActionFilters actionFilters) {
-        super(settings, PercolateAction.NAME, threadPool, clusterService, transportService, actionFilters);
+                                    TransportGetAction getAction, ActionFilters actionFilters, IncludeFieldService includeFieldService) {
+        super(settings, PercolateAction.NAME, threadPool, clusterService, transportService, actionFilters, includeFieldService);
         this.percolatorService = percolatorService;
         this.getAction = getAction;
     }

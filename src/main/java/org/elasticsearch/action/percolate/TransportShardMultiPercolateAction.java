@@ -39,6 +39,7 @@ import org.elasticsearch.common.text.StringText;
 import org.elasticsearch.common.text.Text;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.percolator.PercolatorService;
+import org.elasticsearch.search.fields.IncludeFieldService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -56,8 +57,10 @@ public class TransportShardMultiPercolateAction extends TransportShardSingleOper
     private static final String ACTION_NAME = MultiPercolateAction.NAME + "[shard]";
 
     @Inject
-    public TransportShardMultiPercolateAction(Settings settings, ThreadPool threadPool, ClusterService clusterService, TransportService transportService, PercolatorService percolatorService, ActionFilters actionFilters) {
-        super(settings, ACTION_NAME, threadPool, clusterService, transportService, actionFilters);
+    public TransportShardMultiPercolateAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
+                                              TransportService transportService, PercolatorService percolatorService,
+                                              ActionFilters actionFilters, IncludeFieldService includeFieldService) {
+        super(settings, ACTION_NAME, threadPool, clusterService, transportService, actionFilters, includeFieldService);
         this.percolatorService = percolatorService;
     }
 

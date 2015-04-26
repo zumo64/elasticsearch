@@ -40,6 +40,7 @@ import org.elasticsearch.indices.recovery.RecoveryTarget;
 import org.elasticsearch.indices.store.IndicesStore;
 import org.elasticsearch.indices.store.TransportNodesListShardStoreMetaData;
 import org.elasticsearch.indices.ttl.IndicesTTLService;
+import org.elasticsearch.search.fields.IncludeFieldService;
 
 /**
  *
@@ -78,5 +79,6 @@ public class IndicesModule extends AbstractModule implements SpawnModules {
         bind(UpdateHelper.class).asEagerSingleton();
 
         bind(IndicesFieldDataCacheListener.class).asEagerSingleton();
+        bind(IncludeFieldService.class).asEagerSingleton();
     }
 }
