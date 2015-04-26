@@ -80,7 +80,7 @@ public class ShardTermVectorsService extends AbstractIndexShardComponent {
         final TermVectorsResponse termVectorsResponse = new TermVectorsResponse(concreteIndex, request.type(), request.id());
         final Term uidTerm = new Term(UidFieldMapper.NAME, Uid.createUidAsBytes(request.type(), request.id()));
 
-        Engine.GetResult get = indexShard.get(new Engine.Get(request.realtime(), uidTerm).version(request.version()).versionType(request.versionType()));
+        Engine.GetResult get = indexShard.get(new Engine.Get(request.realtime(), uidTerm).version(request.version()).versionType(request.versionType()).indexOrAlias(request.index()));
 
         boolean docFromTranslog = get.source() != null;
         AggregatedDfs dfs = null;
