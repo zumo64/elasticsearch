@@ -20,6 +20,8 @@
 package org.elasticsearch.aliases;
 
 import org.elasticsearch.action.admin.indices.alias.Alias;
+import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.get.MultiGetResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.cluster.metadata.AliasFieldsFiltering;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -36,12 +38,76 @@ import java.util.Set;
 import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 import static org.elasticsearch.test.hamcrest.ElasticsearchAssertions.assertHitCount;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 
 /**
  */
 public class IndexAliasesFieldsTests extends ElasticsearchSingleNodeTest {
+
+    @Test
+    public void testGetApi() throws Exception {
+        createIndex("test", client().admin().indices().prepareCreate("test")
+                        .addMapping("type1", "field1", "type=string", "field2", "type=string")
+                        .addAlias(new Alias("alias1").includeFields("field2"))
+                        .addAlias(new Alias("alias2").includeFields("field1"))
+        );
+        client().prepareIndex("test", "type1", "1").setSource("field1", "value1", "field2", "value2")
+                .setRefresh(true)
+                .get();
+
+        GetResponse response = client().prepareGet("test", "type1", "1").get();
+        assertThat(response.isExists(), is(true));
+        assertThat(response.getSource().size(), equalTo(2));
+        assertThat(response.getSource().get("field1").toString(), equalTo("value1"));
+        assertThat(response.getSource().get("field2").toString(), equalTo("value2"));
+
+        response = client().prepareGet("alias1", "type1", "1").get();
+        assertThat(response.isExists(), is(true));
+        assertThat(response.getSource().size(), equalTo(1));
+        assertThat(response.getSource().get("field2").toString(), equalTo("value2"));
+
+        response = client().prepareGet("alias2", "type1", "1").get();
+        assertThat(response.isExists(), is(true));
+        assertThat(response.getSource().size(), equalTo(1));
+        assertThat(response.getSource().get("field1").toString(), equalTo("value1"));
+    }
+
+    @Test
+    public void testMGetApi() throws Exception {
+        createIndex("test", client().admin().indices().prepareCreate("test")
+                        .addMapping("type1", "field1", "type=string", "field2", "type=string")
+                        .addAlias(new Alias("alias1").includeFields("field2"))
+                        .addAlias(new Alias("alias2").includeFields("field1"))
+        );
+        client().prepareIndex("test", "type1", "1").setSource("field1", "value1", "field2", "value2")
+                .setRefresh(true)
+                .get();
+
+        MultiGetResponse response = client().prepareMultiGet()
+                .add("test", "type1", "1")
+                .get();
+        assertThat(response.getResponses()[0].isFailed(), is(false));
+        assertThat(response.getResponses()[0].getResponse().isExists(), is(true));
+        assertThat(response.getResponses()[0].getResponse().getSource().size(), equalTo(2));
+        assertThat(response.getResponses()[0].getResponse().getSource().get("field1").toString(), equalTo("value1"));
+        assertThat(response.getResponses()[0].getResponse().getSource().get("field2").toString(), equalTo("value2"));
+
+        response = client().prepareMultiGet()
+                .add("alias1", "type1", "1")
+                .get();
+        assertThat(response.getResponses()[0].isFailed(), is(false));
+        assertThat(response.getResponses()[0].getResponse().isExists(), is(true));
+        assertThat(response.getResponses()[0].getResponse().getSource().size(), equalTo(1));
+        assertThat(response.getResponses()[0].getResponse().getSource().get("field2").toString(), equalTo("value2"));
+
+        response = client().prepareMultiGet()
+                .add("alias2", "type1", "1")
+                .get();
+        assertThat(response.getResponses()[0].isFailed(), is(false));
+        assertThat(response.getResponses()[0].getResponse().isExists(), is(true));
+        assertThat(response.getResponses()[0].getResponse().getSource().size(), equalTo(1));
+        assertThat(response.getResponses()[0].getResponse().getSource().get("field1").toString(), equalTo("value1"));
+    }
 
     @Test
     public void testQuery() throws Exception {
