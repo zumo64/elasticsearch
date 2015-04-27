@@ -78,15 +78,15 @@ public class AliasFieldsFiltering implements Streamable, ToXContent {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject(Fields.FIELDS);
-        if (includes != null) {
+        if (includes.length != 0) {
+            builder.startObject(Fields.FIELDS);
             builder.startArray(Fields.INCLUDES);
             for (String field : includes) {
                 builder.value(field);
             }
             builder.endArray();
+            builder.endObject();
         }
-        builder.endObject();
         return builder;
     }
 

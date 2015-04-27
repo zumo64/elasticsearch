@@ -269,10 +269,7 @@ public class AliasMetaData {
             if (aliasMetaData.searchRouting() != null) {
                 builder.field("search_routing", aliasMetaData.searchRouting());
             }
-            if (aliasMetaData.getFieldsFiltering() != null) {
-                aliasMetaData.getFieldsFiltering().toXContent(builder, params);
-            }
-
+            aliasMetaData.getFieldsFiltering().toXContent(builder, params);
             builder.endObject();
         }
 
