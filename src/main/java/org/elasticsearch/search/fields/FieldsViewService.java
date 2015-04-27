@@ -20,6 +20,8 @@
 package org.elasticsearch.search.fields;
 
 import com.google.common.collect.Sets;
+import org.elasticsearch.action.support.broadcast.BroadcastShardOperationRequest;
+import org.elasticsearch.action.support.single.shard.SingleShardOperationRequest;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.common.inject.Inject;
@@ -28,24 +30,36 @@ import org.elasticsearch.index.aliases.IndexAliasesService;
 import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.indices.IndicesService;
+import org.elasticsearch.search.internal.ShardSearchRequest;
 
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- */
-public class IncludeFieldService {
+// TODO: not sure about the name of this class
+public class FieldsViewService {
 
     private final IndicesService indicesServices;
     private final ClusterService clusterService;
 
     @Inject
-    public IncludeFieldService(IndicesService indicesServices, ClusterService clusterService) {
+    public FieldsViewService(IndicesService indicesServices, ClusterService clusterService) {
         this.indicesServices = indicesServices;
         this.clusterService = clusterService;
     }
 
-    public void prepare(String concreteIndex, String... indicesOrAliases) {
+    public void prepareView(BroadcastShardOperationRequest request) {
+        prepareView(request.shardId().getIndex(), request.indices());
+    }
+
+    public void prepareView(SingleShardOperationRequest request, String concreteIndex) {
+        prepareView(concreteIndex, request.indices());
+    }
+
+    public void prepareView(ShardSearchRequest request) {
+        prepareView(request.index(), request.filteringAliases());
+    }
+
+    public void prepareView(String concreteIndex, String... indicesOrAliases) {
         ClusterState state = clusterService.state();
         String[] filteringAliases = state.getMetaData().filteringAliases(concreteIndex, indicesOrAliases);
         IndexService indexService = indicesServices.indexServiceSafe(concreteIndex);
@@ -67,11 +81,11 @@ public class IncludeFieldService {
             fullFieldNames.add(field.names().fullName());
         }
 
-        IncludeFieldsContext.createAndSet(indexedFieldNames, fullFieldNames);
+        FieldsViewContext.createAndSet(indexedFieldNames, fullFieldNames);
     }
 
-    public void clear() {
-        IncludeFieldsContext.clear();
+    public void clearView() {
+        FieldsViewContext.clear();
     }
 
 }

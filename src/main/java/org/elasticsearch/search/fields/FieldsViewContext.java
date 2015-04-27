@@ -21,26 +21,26 @@ package org.elasticsearch.search.fields;
 
 import java.util.Set;
 
-public final class IncludeFieldsContext {
+public final class FieldsViewContext {
 
-    private static ThreadLocal<IncludeFieldsContext> current = new ThreadLocal<>();
+    private static ThreadLocal<FieldsViewContext> current = new ThreadLocal<>();
 
     public static void createAndSet(Set<String> indexedFieldNames, Set<String> fullFieldNames) {
-        current.set(new IncludeFieldsContext(indexedFieldNames, fullFieldNames));
+        current.set(new FieldsViewContext(indexedFieldNames, fullFieldNames));
     }
 
     public static void clear() {
         current.remove();
     }
 
-    public static IncludeFieldsContext current() {
+    public static FieldsViewContext current() {
         return current.get();
     }
 
     private final Set<String> fullFieldNames;
     private final Set<String> indexedFieldNames;
 
-    private IncludeFieldsContext(Set<String> indexedFieldNames, Set<String> fullFieldNames) {
+    private FieldsViewContext(Set<String> indexedFieldNames, Set<String> fullFieldNames) {
         this.indexedFieldNames = indexedFieldNames;
         this.fullFieldNames = fullFieldNames;
     }

@@ -77,7 +77,7 @@ import org.elasticsearch.search.dfs.CachedDfSource;
 import org.elasticsearch.search.dfs.DfsPhase;
 import org.elasticsearch.search.dfs.DfsSearchResult;
 import org.elasticsearch.search.fetch.*;
-import org.elasticsearch.search.fields.IncludeFieldService;
+import org.elasticsearch.search.fields.FieldsViewService;
 import org.elasticsearch.search.internal.*;
 import org.elasticsearch.search.internal.SearchContext.Lifetime;
 import org.elasticsearch.search.query.*;
@@ -138,17 +138,17 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
 
     private final ImmutableMap<String, SearchParseElement> elementParsers;
 
-    private final IncludeFieldService includeFieldService;
+    private final FieldsViewService fieldsViewService;
 
     @Inject
     public SearchService(Settings settings, ClusterService clusterService, IndicesService indicesService, IndicesWarmer indicesWarmer, ThreadPool threadPool,
                          ScriptService scriptService, PageCacheRecycler pageCacheRecycler, BigArrays bigArrays, DfsPhase dfsPhase, QueryPhase queryPhase, FetchPhase fetchPhase,
-                         IndicesQueryCache indicesQueryCache, IncludeFieldService includeFieldService) {
+                         IndicesQueryCache indicesQueryCache, FieldsViewService fieldsViewService) {
         super(settings);
         this.threadPool = threadPool;
         this.clusterService = clusterService;
         this.indicesService = indicesService;
-        this.includeFieldService = includeFieldService;
+        this.fieldsViewService = fieldsViewService;
         indicesService.indicesLifecycle().addListener(new IndicesLifecycle.Listener() {
 
             @Override
@@ -547,7 +547,7 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
 
         SearchContext context = null;
         try {
-            includeFieldService.prepare(request.index(), request.filteringAliases());
+            fieldsViewService.prepareView(request);
             Engine.Searcher engineSearcher = searcher == null ? indexShard.acquireSearcher("search") : searcher;
             context = new DefaultSearchContext(idGenerator.incrementAndGet(), request, shardTarget, engineSearcher, indexService, indexShard, scriptService, pageCacheRecycler, bigArrays, threadPool.estimatedTimeInMillisCounter());
             SearchContext.setCurrent(context);
@@ -583,7 +583,7 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
             }
             throw ExceptionsHelper.convertToRuntime(e);
         } finally {
-            includeFieldService.clear();
+            fieldsViewService.clearView();
         }
     }
 

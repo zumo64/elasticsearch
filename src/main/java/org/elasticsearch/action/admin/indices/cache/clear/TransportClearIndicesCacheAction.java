@@ -38,7 +38,7 @@ import org.elasticsearch.index.mapper.internal.ParentFieldMapper;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.indices.cache.query.IndicesQueryCache;
-import org.elasticsearch.search.fields.IncludeFieldService;
+import org.elasticsearch.search.fields.FieldsViewService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -59,8 +59,8 @@ public class TransportClearIndicesCacheAction extends TransportBroadcastOperatio
     public TransportClearIndicesCacheAction(Settings settings, ThreadPool threadPool, ClusterService clusterService,
                                             TransportService transportService, IndicesService indicesService,
                                             IndicesQueryCache indicesQueryCache, ActionFilters actionFilters,
-                                            IncludeFieldService includeFieldService) {
-        super(settings, ClearIndicesCacheAction.NAME, threadPool, clusterService, transportService, actionFilters, includeFieldService);
+                                            FieldsViewService fieldsViewService) {
+        super(settings, ClearIndicesCacheAction.NAME, threadPool, clusterService, transportService, actionFilters, fieldsViewService);
         this.indicesService = indicesService;
         this.indicesQueryCache = indicesQueryCache;
     }

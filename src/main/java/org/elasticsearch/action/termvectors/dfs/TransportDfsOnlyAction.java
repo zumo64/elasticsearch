@@ -39,7 +39,7 @@ import org.elasticsearch.search.SearchService;
 import org.elasticsearch.search.controller.SearchPhaseController;
 import org.elasticsearch.search.dfs.AggregatedDfs;
 import org.elasticsearch.search.dfs.DfsSearchResult;
-import org.elasticsearch.search.fields.IncludeFieldService;
+import org.elasticsearch.search.fields.FieldsViewService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -64,8 +64,8 @@ public class TransportDfsOnlyAction extends TransportBroadcastOperationAction<Df
     @Inject
     public TransportDfsOnlyAction(Settings settings, ThreadPool threadPool, ClusterService clusterService, TransportService transportService,
                                   ActionFilters actionFilters, SearchService searchService, SearchPhaseController searchPhaseController,
-                                  IncludeFieldService includeFieldService) {
-        super(settings, NAME, threadPool, clusterService, transportService, actionFilters, includeFieldService);
+                                  FieldsViewService fieldsViewService) {
+        super(settings, NAME, threadPool, clusterService, transportService, actionFilters, fieldsViewService);
         this.searchService = searchService;
         this.searchPhaseController = searchPhaseController;
     }

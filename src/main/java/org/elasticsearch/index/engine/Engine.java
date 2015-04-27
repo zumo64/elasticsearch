@@ -51,7 +51,7 @@ import org.elasticsearch.index.mapper.Uid;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.store.Store;
 import org.elasticsearch.index.translog.Translog;
-import org.elasticsearch.search.fields.IncludeFieldsContext;
+import org.elasticsearch.search.fields.FieldsViewContext;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -277,7 +277,7 @@ public abstract class Engine implements Closeable {
     }
 
     final Searcher filterSearcher(final Searcher searcher) throws EngineException {
-        IncludeFieldsContext context = IncludeFieldsContext.current();
+        FieldsViewContext context = FieldsViewContext.current();
         if (context == null) {
             return searcher;
         }

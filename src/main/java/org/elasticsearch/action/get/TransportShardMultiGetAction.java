@@ -34,7 +34,7 @@ import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.indices.IndicesService;
-import org.elasticsearch.search.fields.IncludeFieldService;
+import org.elasticsearch.search.fields.FieldsViewService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -49,8 +49,8 @@ public class TransportShardMultiGetAction extends TransportShardSingleOperationA
     @Inject
     public TransportShardMultiGetAction(Settings settings, ClusterService clusterService, TransportService transportService,
                                         IndicesService indicesService, ThreadPool threadPool, ActionFilters actionFilters,
-                                        IncludeFieldService includeFieldService) {
-        super(settings, ACTION_NAME, threadPool, clusterService, transportService, actionFilters, includeFieldService);
+                                        FieldsViewService fieldsViewService) {
+        super(settings, ACTION_NAME, threadPool, clusterService, transportService, actionFilters, fieldsViewService);
         this.indicesService = indicesService;
 
         this.realtime = settings.getAsBoolean("action.get.realtime", true);
@@ -107,7 +107,7 @@ public class TransportShardMultiGetAction extends TransportShardSingleOperationA
         for (int i = 0; i < request.locations.size(); i++) {
             MultiGetRequest.Item item = request.items.get(i);
             try {
-                includeFieldService.prepare(shardId.getIndex(), item.index());
+                fieldsViewService.prepareView(shardId.getIndex(), item.index());
                 GetResult getResult = indexShard.getService().get(item.index(), item.type(), item.id(), item.fields(), request.realtime(), item.version(), item.versionType(), item.fetchSourceContext(), request.ignoreErrorsOnGeneratedFields());
                 response.add(request.locations.get(i), new GetResponse(getResult));
             } catch (Throwable t) {
@@ -118,7 +118,7 @@ public class TransportShardMultiGetAction extends TransportShardSingleOperationA
                     response.add(request.locations.get(i), new MultiGetResponse.Failure(request.index(), item.type(), item.id(), ExceptionsHelper.detailedMessage(t)));
                 }
             } finally {
-                includeFieldService.clear();
+                fieldsViewService.clearView();
             }
         }
 
