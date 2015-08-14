@@ -32,6 +32,8 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
+import org.elasticsearch.index.engine.Engine;
+import org.elasticsearch.search.internal.ContextIndexSearcher;
 import org.elasticsearch.search.scan.ScanContext.MinDocQuery;
 import org.elasticsearch.test.ESTestCase;
 
@@ -80,7 +82,7 @@ public class ScanContextTests extends ESTestCase {
             w.addDocument(randomBoolean() ? doc1 : doc2);
         }
         final IndexReader reader = w.getReader();
-        final IndexSearcher searcher = newSearcher(reader);
+        final ContextIndexSearcher searcher = new ContextIndexSearcher(new Engine.Searcher("test", newSearcher(reader)));
 
         final boolean trackScores = randomBoolean();
         final int pageSize = randomIntBetween(1, numDocs / 2);

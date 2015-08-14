@@ -23,14 +23,13 @@ import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Terms;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.suggest.Lookup;
 import org.apache.lucene.util.CharsRefBuilder;
 import org.apache.lucene.util.CollectionUtil;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.text.StringText;
-import org.elasticsearch.index.mapper.core.CompletionFieldMapper;
+import org.elasticsearch.search.internal.ContextIndexSearcher;
 import org.elasticsearch.search.suggest.Suggest;
 import org.elasticsearch.search.suggest.SuggestContextParser;
 import org.elasticsearch.search.suggest.Suggester;
@@ -49,7 +48,7 @@ public class CompletionSuggester extends Suggester<CompletionSuggestionContext> 
 
     @Override
     protected Suggest.Suggestion<? extends Suggest.Suggestion.Entry<? extends Suggest.Suggestion.Entry.Option>> innerExecute(String name,
-            CompletionSuggestionContext suggestionContext, IndexSearcher searcher, CharsRefBuilder spare) throws IOException {
+            CompletionSuggestionContext suggestionContext, ContextIndexSearcher searcher, CharsRefBuilder spare) throws IOException {
         if (suggestionContext.fieldType() == null) {
             throw new ElasticsearchException("Field [" + suggestionContext.getField() + "] is not a completion suggest field");
         }

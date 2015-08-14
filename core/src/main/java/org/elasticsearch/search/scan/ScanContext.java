@@ -20,19 +20,10 @@
 package org.elasticsearch.search.scan;
 
 import org.apache.lucene.index.LeafReaderContext;
-import org.apache.lucene.search.CollectionTerminatedException;
-import org.apache.lucene.search.ConstantScoreScorer;
-import org.apache.lucene.search.ConstantScoreWeight;
-import org.apache.lucene.search.DocIdSetIterator;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.Scorer;
-import org.apache.lucene.search.SimpleCollector;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.Weight;
+import org.apache.lucene.search.*;
 import org.apache.lucene.util.Bits;
 import org.elasticsearch.common.lucene.search.Queries;
+import org.elasticsearch.search.internal.ContextIndexSearcher;
 import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
@@ -51,10 +42,10 @@ public class ScanContext {
         return execute(context.searcher(), context.query(), context.size(), context.trackScores());
     }
 
-    TopDocs execute(IndexSearcher searcher, Query query, int size, boolean trackScores) throws IOException {
+    TopDocs execute(ContextIndexSearcher searcher, Query query, int size, boolean trackScores) throws IOException {
         ScanCollector collector = new ScanCollector(size, trackScores);
         Query q = Queries.filtered(query, new MinDocQuery(docUpTo));
-        searcher.search(q, collector);
+        searcher.decorateCollectorAndSearch(q, collector);
         return collector.topDocs();
     }
 

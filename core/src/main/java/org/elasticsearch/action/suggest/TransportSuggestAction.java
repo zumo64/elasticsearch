@@ -42,6 +42,7 @@ import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.suggest.stats.ShardSuggestMetric;
 import org.elasticsearch.indices.IndicesService;
+import org.elasticsearch.search.internal.ContextIndexSearcher;
 import org.elasticsearch.search.suggest.Suggest;
 import org.elasticsearch.search.suggest.SuggestPhase;
 import org.elasticsearch.search.suggest.SuggestionSearchContext;
@@ -145,7 +146,7 @@ public class TransportSuggestAction extends TransportBroadcastAction<SuggestRequ
                 }
                 final SuggestionSearchContext context = suggestPhase.parseElement().parseInternal(parser, indexService.mapperService(),
                         indexService.queryParserService(), request.shardId().getIndex(), request.shardId().id());
-                final Suggest result = suggestPhase.execute(context, searcher.searcher());
+                final Suggest result = suggestPhase.execute(context, new ContextIndexSearcher(null, searcher));
                 return new ShardSuggestResponse(request.shardId(), result);
             }
             return new ShardSuggestResponse(request.shardId(), new Suggest());

@@ -50,29 +50,31 @@ import java.util.Map;
  */
 public class ContextIndexSearcher extends IndexSearcher implements Releasable {
 
-    public static enum Stage {
+    public enum Stage {
         NA,
         MAIN_QUERY
     }
+
+    private final SearchContext searchContext;
 
     /** The wrapped {@link IndexSearcher}. The reason why we sometimes prefer delegating to this searcher instead of <tt>super</tt> is that
      *  this instance may have more assertions, for example if it comes from MockInternalEngine which wraps the IndexSearcher into an
      *  AssertingIndexSearcher. */
     private final IndexSearcher in;
 
-    private final SearchContext searchContext;
-
     private CachedDfSource dfSource;
 
     private Map<Class<?>, Collector> queryCollectors;
 
-    private Stage currentState = Stage.NA;
+    public ContextIndexSearcher(Engine.Searcher searcher) {
+        this(null, searcher);
+    }
 
     public ContextIndexSearcher(SearchContext searchContext, Engine.Searcher searcher) {
         super(searcher.reader());
-        in = searcher.searcher();
         this.searchContext = searchContext;
-        setSimilarity(searcher.searcher().getSimilarity(true));
+        in = searcher.searcher();
+        setSimilarity(in.getSimilarity(true));
     }
 
     @Override
@@ -85,7 +87,7 @@ public class ContextIndexSearcher extends IndexSearcher implements Releasable {
 
     /**
      * Adds a query level collector that runs at {@link Stage#MAIN_QUERY}. Note, supports
-     * {@link org.elasticsearch.common.lucene.search.XCollector} allowing for a callback
+     * {@link Collector} allowing for a callback
      * when collection is done.
      */
     public Map<Class<?>, Collector> queryCollectors() {
@@ -95,17 +97,12 @@ public class ContextIndexSearcher extends IndexSearcher implements Releasable {
         return queryCollectors;
     }
 
-    public void inStage(Stage stage) {
-        this.currentState = stage;
-    }
-
-    public void finishStage(Stage stage) {
-        assert currentState == stage : "Expected stage " + stage + " but was stage " + currentState;
-        this.currentState = Stage.NA;
-    }
-
     @Override
     public Query rewrite(Query original) throws IOException {
+        if (searchContext == null) {
+            return in.rewrite(original);
+        }
+
         if (original == searchContext.query() || original == searchContext.parsedQuery().query()) {
             // optimize in case its the top level search query and we already rewrote it...
             if (searchContext.queryRewritten()) {
@@ -121,6 +118,9 @@ public class ContextIndexSearcher extends IndexSearcher implements Releasable {
 
     @Override
     public Weight createNormalizedWeight(Query query, boolean needsScores) throws IOException {
+        if (searchContext == null) {
+            return in.createNormalizedWeight(query, needsScores);
+        }
         // TODO: needsScores
         // can we avoid dfs stuff here if we dont need scores?
         try {
@@ -135,47 +135,13 @@ public class ContextIndexSearcher extends IndexSearcher implements Releasable {
         }
     }
 
-
-    @Override
-    public void search(Query query, Collector collector) throws IOException {
-        // Wrap the caller's collector with various wrappers e.g. those used to siphon
-        // matches off for aggregation or to impose a time-limit on collection.
-        final boolean timeoutSet = searchContext.timeoutInMillis() != SearchService.NO_TIMEOUT.millis();
-        final boolean terminateAfterSet = searchContext.terminateAfter() != SearchContext.DEFAULT_TERMINATE_AFTER;
-
-        if (timeoutSet) {
-            // TODO: change to use our own counter that uses the scheduler in ThreadPool
-            // throws TimeLimitingCollector.TimeExceededException when timeout has reached
-            collector = Lucene.wrapTimeLimitingCollector(collector, searchContext.timeEstimateCounter(), searchContext.timeoutInMillis());
-        }
-        if (terminateAfterSet) {
-            // throws Lucene.EarlyTerminationException when given count is reached
-            collector = Lucene.wrapCountBasedEarlyTerminatingCollector(collector, searchContext.terminateAfter());
-        }
-        if (currentState == Stage.MAIN_QUERY && (query == searchContext.query() || query == searchContext.parsedQuery().query())) {
-            if (searchContext.parsedPostFilter() != null) {
-                // this will only get applied to the actual search collector and not
-                // to any scoped collectors, also, it will only be applied to the main collector
-                // since that is where the filter should only work
-                final Weight filterWeight = createNormalizedWeight(searchContext.parsedPostFilter().query(), false);
-                collector = new FilteredCollector(collector, filterWeight);
-            }
-            if (queryCollectors != null && !queryCollectors.isEmpty()) {
-                ArrayList<Collector> allCollectors = new ArrayList<>(queryCollectors.values());
-                allCollectors.add(collector);
-                collector = MultiCollector.wrap(allCollectors);
-            }
-
-            // apply the minimum score after multi collector so we filter aggs as well
-            if (searchContext.minimumScore() != null) {
-                collector = new MinimumScoreCollector(collector, searchContext.minimumScore());
-            }
-        }
-        super.search(query, collector);
-    }
-
     @Override
     public void search(List<LeafReaderContext> leaves, Weight weight, Collector collector) throws IOException {
+        if (searchContext == null) {
+            super.search(leaves, weight, collector);
+            return;
+        }
+
         final boolean timeoutSet = searchContext.timeoutInMillis() != SearchService.NO_TIMEOUT.millis();
         final boolean terminateAfterSet = searchContext.terminateAfter() != SearchContext.DEFAULT_TERMINATE_AFTER;
         try {
@@ -202,6 +168,10 @@ public class ContextIndexSearcher extends IndexSearcher implements Releasable {
 
     @Override
     public Explanation explain(Query query, int doc) throws IOException {
+        if (searchContext == null) {
+            return super.explain(query, doc);
+        }
+
         try {
             if (searchContext.aliasFilter() == null) {
                 return super.explain(query, doc);
@@ -213,5 +183,47 @@ public class ContextIndexSearcher extends IndexSearcher implements Releasable {
         } finally {
             searchContext.clearReleasables(Lifetime.COLLECTION);
         }
+    }
+
+    public void decorateCollectorAndSearch(Query query, Collector collector) throws IOException {
+        if (searchContext == null) {
+            search(query, collector);
+            return;
+        }
+
+        // Wrap the caller's collector with various wrappers e.g. those used to siphon
+        // matches off for aggregation or to impose a time-limit on collection.
+        final boolean timeoutSet = searchContext.timeoutInMillis() != SearchService.NO_TIMEOUT.millis();
+        final boolean terminateAfterSet = searchContext.terminateAfter() != SearchContext.DEFAULT_TERMINATE_AFTER;
+
+        if (timeoutSet) {
+            // TODO: change to use our own counter that uses the scheduler in ThreadPool
+            // throws TimeLimitingCollector.TimeExceededException when timeout has reached
+            collector = Lucene.wrapTimeLimitingCollector(collector, searchContext.timeEstimateCounter(), searchContext.timeoutInMillis());
+        }
+        if (terminateAfterSet) {
+            // throws Lucene.EarlyTerminationException when given count is reached
+            collector = Lucene.wrapCountBasedEarlyTerminatingCollector(collector, searchContext.terminateAfter());
+        }
+        if (query == searchContext.query() || query == searchContext.parsedQuery().query()) {
+            if (searchContext.parsedPostFilter() != null) {
+                // this will only get applied to the actual search collector and not
+                // to any scoped collectors, also, it will only be applied to the main collector
+                // since that is where the filter should only work
+                final Weight filterWeight = createNormalizedWeight(searchContext.parsedPostFilter().query(), false);
+                collector = new FilteredCollector(collector, filterWeight);
+            }
+            if (queryCollectors != null && !queryCollectors.isEmpty()) {
+                ArrayList<Collector> allCollectors = new ArrayList<>(queryCollectors.values());
+                allCollectors.add(collector);
+                collector = MultiCollector.wrap(allCollectors);
+            }
+
+            // apply the minimum score after multi collector so we filter aggs as well
+            if (searchContext.minimumScore() != null) {
+                collector = new MinimumScoreCollector(collector, searchContext.minimumScore());
+            }
+        }
+        super.search(query, collector);
     }
 }

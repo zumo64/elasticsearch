@@ -23,7 +23,6 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.index.Terms;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.spell.DirectSpellChecker;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefBuilder;
@@ -38,6 +37,7 @@ import org.elasticsearch.index.query.ParsedQuery;
 import org.elasticsearch.script.CompiledScript;
 import org.elasticsearch.script.ExecutableScript;
 import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.search.internal.ContextIndexSearcher;
 import org.elasticsearch.search.suggest.Suggest.Suggestion;
 import org.elasticsearch.search.suggest.Suggest.Suggestion.Entry;
 import org.elasticsearch.search.suggest.Suggest.Suggestion.Entry.Option;
@@ -70,7 +70,7 @@ public final class PhraseSuggester extends Suggester<PhraseSuggestionContext> {
      *   - phonetic filters could be interesting here too for candidate selection
      */
     @Override
-    public Suggestion<? extends Entry<? extends Option>> innerExecute(String name, PhraseSuggestionContext suggestion, IndexSearcher searcher,
+    public Suggestion<? extends Entry<? extends Option>> innerExecute(String name, PhraseSuggestionContext suggestion, ContextIndexSearcher searcher,
             CharsRefBuilder spare) throws IOException {
         double realWordErrorLikelihood = suggestion.realworldErrorLikelyhood();
         final PhraseSuggestion response = new PhraseSuggestion(name, suggestion.getSize());

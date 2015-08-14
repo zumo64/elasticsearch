@@ -20,7 +20,6 @@ package org.elasticsearch.search.suggest.term;
 
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.spell.DirectSpellChecker;
 import org.apache.lucene.search.spell.SuggestWord;
 import org.apache.lucene.util.BytesRef;
@@ -30,6 +29,7 @@ import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.text.BytesText;
 import org.elasticsearch.common.text.StringText;
 import org.elasticsearch.common.text.Text;
+import org.elasticsearch.search.internal.ContextIndexSearcher;
 import org.elasticsearch.search.suggest.SuggestContextParser;
 import org.elasticsearch.search.suggest.SuggestUtils;
 import org.elasticsearch.search.suggest.Suggester;
@@ -42,7 +42,7 @@ import java.util.List;
 public final class TermSuggester extends Suggester<TermSuggestionContext> {
 
     @Override
-    public TermSuggestion innerExecute(String name, TermSuggestionContext suggestion, IndexSearcher searcher, CharsRefBuilder spare) throws IOException {
+    public TermSuggestion innerExecute(String name, TermSuggestionContext suggestion, ContextIndexSearcher searcher, CharsRefBuilder spare) throws IOException {
         DirectSpellChecker directSpellChecker = SuggestUtils.getDirectSpellChecker(suggestion.getDirectSpellCheckerSettings());
         final IndexReader indexReader = searcher.getIndexReader();
         TermSuggestion response = new TermSuggestion(

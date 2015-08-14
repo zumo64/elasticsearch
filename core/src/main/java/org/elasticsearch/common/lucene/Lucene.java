@@ -38,23 +38,7 @@ import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.NoMergePolicy;
 import org.apache.lucene.index.SegmentCommitInfo;
 import org.apache.lucene.index.SegmentInfos;
-import org.apache.lucene.search.Collector;
-import org.apache.lucene.search.DocIdSet;
-import org.apache.lucene.search.DocIdSetIterator;
-import org.apache.lucene.search.Explanation;
-import org.apache.lucene.search.FieldDoc;
-import org.apache.lucene.search.Filter;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.LeafCollector;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.Scorer;
-import org.apache.lucene.search.SimpleCollector;
-import org.apache.lucene.search.SortField;
-import org.apache.lucene.search.TimeLimitingCollector;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.TopFieldDocs;
-import org.apache.lucene.search.TwoPhaseIterator;
+import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
@@ -75,6 +59,7 @@ import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.index.analysis.AnalyzerScope;
 import org.elasticsearch.index.analysis.NamedAnalyzer;
 import org.elasticsearch.index.fielddata.IndexFieldData;
+import org.elasticsearch.search.internal.ContextIndexSearcher;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -299,7 +284,7 @@ public class Lucene {
      * Performs a count on the <code>searcher</code> for <code>query</code>. Terminates
      * early when the count has reached <code>terminateAfter</code>
      */
-    public static long count(IndexSearcher searcher, Query query, int terminateAfterCount) throws IOException {
+    public static long count(ContextIndexSearcher searcher, Query query, int terminateAfterCount) throws IOException {
         EarlyTerminatingCollector countCollector = createCountBasedEarlyTerminatingCollector(terminateAfterCount);
         countWithEarlyTermination(searcher, query, countCollector);
         return countCollector.count();
@@ -332,7 +317,7 @@ public class Lucene {
      *
      * The <code>collector</code> can be instantiated using <code>Lucene.createExistsCollector()</code>
      */
-    public static boolean exists(IndexSearcher searcher, Query query, Filter filter,
+    public static boolean exists(ContextIndexSearcher searcher, Query query, Filter filter,
                                  EarlyTerminatingCollector collector) throws IOException {
         collector.reset();
         countWithEarlyTermination(searcher, filter, query, collector);
@@ -346,7 +331,7 @@ public class Lucene {
      *
      * The <code>collector</code> can be instantiated using <code>Lucene.createExistsCollector()</code>
      */
-    public static boolean exists(IndexSearcher searcher, Query query, EarlyTerminatingCollector collector) throws IOException {
+    public static boolean exists(ContextIndexSearcher searcher, Query query, EarlyTerminatingCollector collector) throws IOException {
         collector.reset();
         countWithEarlyTermination(searcher, query, collector);
         return collector.exists();
@@ -355,7 +340,7 @@ public class Lucene {
     /**
      * Calls <code>countWithEarlyTermination(searcher, null, query, collector)</code>
      */
-    public static boolean countWithEarlyTermination(IndexSearcher searcher, Query query,
+    public static boolean countWithEarlyTermination(ContextIndexSearcher searcher, Query query,
                                                   EarlyTerminatingCollector collector) throws IOException {
         return countWithEarlyTermination(searcher, null, query, collector);
     }
@@ -364,14 +349,16 @@ public class Lucene {
      * Performs a count on <code>query</code> and <code>filter</code> with early termination using <code>searcher</code>.
      * The early termination threshold is specified by the provided <code>collector</code>
      */
-    public static boolean countWithEarlyTermination(IndexSearcher searcher, Filter filter, Query query,
+    public static boolean countWithEarlyTermination(ContextIndexSearcher searcher, Filter filter, Query query,
                                                         EarlyTerminatingCollector collector) throws IOException {
         try {
-            if (filter == null) {
-                searcher.search(query, collector);
-            } else {
-                searcher.search(query, filter, collector);
+            if (filter != null) {
+                BooleanQuery bq = new BooleanQuery();
+                bq.add(query, BooleanClause.Occur.MUST);
+                bq.add(filter, BooleanClause.Occur.FILTER);
+                query = bq;
             }
+            searcher.decorateCollectorAndSearch(query, collector);
         } catch (EarlyTerminationException e) {
             // early termination
             return true;

@@ -19,7 +19,6 @@
 package org.elasticsearch.search.suggest;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.CharsRefBuilder;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.component.AbstractComponent;
@@ -27,6 +26,7 @@ import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.search.SearchParseElement;
 import org.elasticsearch.search.SearchPhase;
+import org.elasticsearch.search.internal.ContextIndexSearcher;
 import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.search.suggest.Suggest.Suggestion;
 import org.elasticsearch.search.suggest.Suggest.Suggestion.Entry;
@@ -74,7 +74,7 @@ public class SuggestPhase extends AbstractComponent implements SearchPhase {
         context.queryResult().suggest(execute(suggest, context.searcher()));
     }
 
-    public Suggest execute(SuggestionSearchContext suggest, IndexSearcher searcher) {
+    public Suggest execute(SuggestionSearchContext suggest, ContextIndexSearcher searcher) {
         try {
             CharsRefBuilder spare = new CharsRefBuilder();
             final List<Suggestion<? extends Entry<? extends Option>>> suggestions = new ArrayList<>(suggest.suggestions().size());

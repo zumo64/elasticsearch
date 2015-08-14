@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.LeafReaderContext;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Sort;
@@ -32,8 +31,10 @@ import org.apache.lucene.util.Counter;
 import org.elasticsearch.action.percolate.PercolateShardRequest;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.cache.recycler.PageCacheRecycler;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.common.*;
+import org.elasticsearch.common.HasContext;
+import org.elasticsearch.common.HasContextAndHeaders;
+import org.elasticsearch.common.HasHeaders;
+import org.elasticsearch.common.ParseFieldMatcher;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.common.text.StringText;
@@ -64,11 +65,7 @@ import org.elasticsearch.search.fetch.innerhits.InnerHitsContext;
 import org.elasticsearch.search.fetch.script.ScriptFieldsContext;
 import org.elasticsearch.search.fetch.source.FetchSourceContext;
 import org.elasticsearch.search.highlight.SearchContextHighlight;
-import org.elasticsearch.search.internal.ContextIndexSearcher;
-import org.elasticsearch.search.internal.InternalSearchHit;
-import org.elasticsearch.search.internal.InternalSearchHitField;
-import org.elasticsearch.search.internal.SearchContext;
-import org.elasticsearch.search.internal.ShardSearchRequest;
+import org.elasticsearch.search.internal.*;
 import org.elasticsearch.search.lookup.LeafSearchLookup;
 import org.elasticsearch.search.lookup.SearchLookup;
 import org.elasticsearch.search.query.QuerySearchResult;
@@ -140,8 +137,8 @@ public class PercolateContext extends SearchContext {
         this.startTime = request.getStartTime();
     }
 
-    public IndexSearcher docSearcher() {
-        return docSearcher.searcher();
+    public ContextIndexSearcher docSearcher() {
+        return new ContextIndexSearcher(this, docSearcher);
     }
 
     public void initialize(Engine.Searcher docSearcher, ParsedDocument parsedDocument) {

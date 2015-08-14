@@ -18,12 +18,12 @@
  */
 package org.elasticsearch.search.suggest;
 
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.CharsRefBuilder;
 import org.elasticsearch.common.text.StringText;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.query.IndexQueryParserService;
+import org.elasticsearch.search.internal.ContextIndexSearcher;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -37,7 +37,7 @@ public class CustomSuggester extends Suggester<CustomSuggester.CustomSuggestions
 
     // This is a pretty dumb implementation which returns the original text + fieldName + custom config option + 12 or 123
     @Override
-    public Suggest.Suggestion<? extends Suggest.Suggestion.Entry<? extends Suggest.Suggestion.Entry.Option>> innerExecute(String name, CustomSuggestionsContext suggestion, IndexSearcher searcher, CharsRefBuilder spare) throws IOException {
+    public Suggest.Suggestion<? extends Suggest.Suggestion.Entry<? extends Suggest.Suggestion.Entry.Option>> innerExecute(String name, CustomSuggestionsContext suggestion, ContextIndexSearcher searcher, CharsRefBuilder spare) throws IOException {
         // Get the suggestion context
         String text = suggestion.getText().utf8ToString();
 

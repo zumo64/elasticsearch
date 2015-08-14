@@ -20,17 +20,13 @@
 package org.elasticsearch.search.query;
 
 import com.google.common.collect.ImmutableMap;
-
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.*;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.search.SearchParseElement;
 import org.elasticsearch.search.SearchPhase;
 import org.elasticsearch.search.aggregations.AggregationPhase;
-import org.elasticsearch.search.internal.ContextIndexSearcher;
 import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.search.rescore.RescorePhase;
 import org.elasticsearch.search.rescore.RescoreSearchContext;
@@ -97,7 +93,6 @@ public class QueryPhase implements SearchPhase {
 
         searchContext.queryResult().searchTimedOut(false);
 
-        searchContext.searcher().inStage(ContextIndexSearcher.Stage.MAIN_QUERY);
         boolean rescore = false;
         try {
             searchContext.queryResult().from(searchContext.from());
@@ -106,30 +101,37 @@ public class QueryPhase implements SearchPhase {
             Query query = searchContext.query();
 
             final TopDocs topDocs;
-            int numDocs = searchContext.from() + searchContext.size();
+            int numHits = searchContext.from() + searchContext.size();
+            final int limit = Math.max(1, searchContext.searcher().getIndexReader().maxDoc());
+            final int cappedNumHits = Math.min(numHits, limit);
 
             if (searchContext.size() == 0) { // no matter what the value of from is
                 topDocs = new TopDocs(searchContext.searcher().count(query), Lucene.EMPTY_SCORE_DOCS, 0);
             } else if (searchContext.searchType() == SearchType.SCAN) {
                 topDocs = searchContext.scanContext().execute(searchContext);
             } else {
+                final ScoreDoc lastEmittedDoc;
                 // Perhaps have a dedicated scroll phase?
                 if (searchContext.request().scroll() != null) {
-                    numDocs = searchContext.size();
-                    ScoreDoc lastEmittedDoc = searchContext.lastEmittedDoc();
-                    if (searchContext.sort() != null) {
-                        topDocs = searchContext.searcher().searchAfter(
-                                lastEmittedDoc, query, null, numDocs, searchContext.sort(),
-                                searchContext.trackScores(), searchContext.trackScores()
-                        );
-                    } else {
-                        rescore = !searchContext.rescore().isEmpty();
-                        for (RescoreSearchContext rescoreContext : searchContext.rescore()) {
-                            numDocs = Math.max(rescoreContext.window(), numDocs);
-                        }
-                        topDocs = searchContext.searcher().searchAfter(lastEmittedDoc, query, numDocs);
+                    numHits = searchContext.size();
+                    lastEmittedDoc = searchContext.lastEmittedDoc();
+                } else {
+                    lastEmittedDoc = null;
+                }
+                final TopDocsCollector collector;
+                if (searchContext.sort() != null) {
+                    collector = TopFieldCollector.create(searchContext.sort(), cappedNumHits, (FieldDoc) lastEmittedDoc, true,
+                            searchContext.trackScores(), searchContext.trackScores());
+                } else {
+                    rescore = !searchContext.rescore().isEmpty();
+                    for (RescoreSearchContext rescoreContext : searchContext.rescore()) {
+                        numHits = Math.max(rescoreContext.window(), numHits);
                     }
-
+                    collector = TopScoreDocCollector.create(cappedNumHits, lastEmittedDoc);
+                }
+                searchContext.searcher().decorateCollectorAndSearch(query, collector);
+                topDocs = collector.topDocs();
+                if (searchContext.request().scroll() != null) {
                     int size = topDocs.scoreDocs.length;
                     if (size > 0) {
                         // In the case of *QUERY_AND_FETCH we don't get back to shards telling them which least
@@ -139,24 +141,11 @@ public class QueryPhase implements SearchPhase {
                             searchContext.lastEmittedDoc(topDocs.scoreDocs[size - 1]);
                         }
                     }
-                } else {
-                    if (searchContext.sort() != null) {
-                        topDocs = searchContext.searcher().search(query, null, numDocs, searchContext.sort(),
-                                searchContext.trackScores(), searchContext.trackScores());
-                    } else {
-                        rescore = !searchContext.rescore().isEmpty();
-                        for (RescoreSearchContext rescoreContext : searchContext.rescore()) {
-                            numDocs = Math.max(rescoreContext.window(), numDocs);
-                        }
-                        topDocs = searchContext.searcher().search(query, numDocs);
-                    }
                 }
             }
             searchContext.queryResult().topDocs(topDocs);
         } catch (Throwable e) {
             throw new QueryPhaseExecutionException(searchContext, "Failed to execute main query", e);
-        } finally {
-            searchContext.searcher().finishStage(ContextIndexSearcher.Stage.MAIN_QUERY);
         }
         if (rescore) { // only if we do a regular search
             rescorePhase.execute(searchContext);

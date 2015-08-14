@@ -127,7 +127,7 @@ public class AggregationPhase implements SearchPhase {
             }
             try {
                 globalsCollector.preCollection();
-                context.searcher().search(query, globalsCollector);
+                context.searcher().decorateCollectorAndSearch(query, globalsCollector);
             } catch (Exception e) {
                 throw new QueryPhaseExecutionException(context, "Failed to execute global aggregators", e);
             }
