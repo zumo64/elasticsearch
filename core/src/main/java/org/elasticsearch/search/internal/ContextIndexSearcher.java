@@ -152,7 +152,7 @@ public class ContextIndexSearcher extends IndexSearcher implements Releasable {
             // throws Lucene.EarlyTerminationException when given count is reached
             collector = Lucene.wrapCountBasedEarlyTerminatingCollector(collector, searchContext.terminateAfter());
         }
-        if (currentState == Stage.MAIN_QUERY) {
+        if (currentState == Stage.MAIN_QUERY && (query == searchContext.query() || query == searchContext.parsedQuery().query())) {
             if (searchContext.parsedPostFilter() != null) {
                 // this will only get applied to the actual search collector and not
                 // to any scoped collectors, also, it will only be applied to the main collector

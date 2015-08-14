@@ -40,6 +40,7 @@ import org.elasticsearch.common.lucene.search.NoopCollector;
 import org.elasticsearch.index.fielddata.AtomicParentChildFieldData;
 import org.elasticsearch.index.fielddata.IndexParentChildFieldData;
 import org.elasticsearch.index.fielddata.plain.ParentChildIndexFieldData;
+import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
 import java.util.List;
@@ -75,6 +76,7 @@ public class ParentConstantScoreQuery extends IndexCacheableQuery {
 
     @Override
     public Weight doCreateWeight(IndexSearcher searcher, boolean needsScores) throws IOException {
+        SearchContext sc = SearchContext.current();
         IndexParentChildFieldData globalIfd = parentChildIndexFieldData.loadGlobal(searcher.getIndexReader());
 
         final long maxOrd;
@@ -92,10 +94,7 @@ public class ParentConstantScoreQuery extends IndexCacheableQuery {
         }
 
         ParentOrdsCollector collector = new ParentOrdsCollector(globalIfd, maxOrd, parentType);
-        IndexSearcher indexSearcher = new IndexSearcher(searcher.getIndexReader());
-        indexSearcher.setSimilarity(searcher.getSimilarity(true));
-        indexSearcher.setQueryCache(null);
-        indexSearcher.search(parentQuery, collector);
+        sc.searcher().search(parentQuery, collector);
 
         if (collector.parentCount() == 0) {
             return new BooleanQuery().createWeight(searcher, needsScores);

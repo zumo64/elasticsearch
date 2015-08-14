@@ -333,7 +333,7 @@ public class TestSearchContext extends SearchContext {
 
     @Override
     public long timeoutInMillis() {
-        return 0;
+        return -1;
     }
 
     @Override
