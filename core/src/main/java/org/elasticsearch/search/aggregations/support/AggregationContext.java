@@ -30,6 +30,7 @@ import org.elasticsearch.index.fielddata.IndexNumericFieldData;
 import org.elasticsearch.index.fielddata.IndexOrdinalsFieldData;
 import org.elasticsearch.index.fielddata.plain.ParentChildIndexFieldData;
 import org.elasticsearch.index.mapper.core.DateFieldMapper;
+import org.elasticsearch.index.query.support.NestedScope;
 import org.elasticsearch.search.SearchParseException;
 import org.elasticsearch.search.aggregations.AggregationExecutionException;
 import org.elasticsearch.search.internal.SearchContext;
@@ -42,6 +43,8 @@ import java.io.IOException;
 public class AggregationContext {
 
     private final SearchContext searchContext;
+
+    private final NestedScope nestedScope = new NestedScope();
 
     public AggregationContext(SearchContext searchContext) {
         this.searchContext = searchContext;
@@ -57,6 +60,10 @@ public class AggregationContext {
 
     public BigArrays bigArrays() {
         return searchContext.bigArrays();
+    }
+
+    public NestedScope nestedScope() {
+        return nestedScope;
     }
 
     /** Get a value source given its configuration. A return value of null indicates that
