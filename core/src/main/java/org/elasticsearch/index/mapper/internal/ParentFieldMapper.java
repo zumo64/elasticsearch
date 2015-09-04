@@ -130,6 +130,8 @@ public class ParentFieldMapper extends MetadataFieldMapper {
                         builder.fieldDataSettings(settings);
                     }
                     iterator.remove();
+                } else {
+                    assert false : "No extra options are allowed to be added until the compatibility check for the field type is re-enabled";
                 }
             }
             return builder;
@@ -219,6 +221,13 @@ public class ParentFieldMapper extends MetadataFieldMapper {
                 }
             }
             return new TermsQuery(names().indexName(), bValues);
+        }
+
+        @Override
+        public void checkCompatibility(MappedFieldType other, List<String> conflicts, boolean strict) {
+            // field data loading can unfortunately by different per _parent field and this fails the compatibility check,
+            // since field data loading is the only thing that can be set on this field type via the mapper we can
+            // disable this check as temporary workaround
         }
     }
 
