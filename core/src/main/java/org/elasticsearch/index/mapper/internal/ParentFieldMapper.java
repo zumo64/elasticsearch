@@ -102,6 +102,7 @@ public class ParentFieldMapper extends MetadataFieldMapper {
             if (type == null) {
                 throw new MapperParsingException("[_parent] field mapping must contain the [type] option");
             }
+            name = fieldName(type);
             setupFieldType(context);
             fieldType.setHasDocValues(context.indexCreatedVersion().onOrAfter(Version.V_2_0_0_beta1));
             return new ParentFieldMapper(fieldType, type, context.indexSettings());
@@ -218,7 +219,9 @@ public class ParentFieldMapper extends MetadataFieldMapper {
                     }
                 }
             }
-            return new TermsQuery(names().indexName(), bValues);
+
+            String fieldName = hasDocValues() ? names().indexName() : ParentFieldMapper.NAME;
+            return new TermsQuery(fieldName, bValues);
         }
     }
 
@@ -237,6 +240,10 @@ public class ParentFieldMapper extends MetadataFieldMapper {
         fieldType = fieldType.clone();
         fieldType.setHasDocValues(Version.indexCreated(indexSettings).onOrAfter(Version.V_2_0_0_beta1));
         return fieldType;
+    }
+
+    static String fieldName(String parentType) {
+        return parentType != null ? joinField(parentType) : NAME;
     }
 
     public String type() {
@@ -265,11 +272,12 @@ public class ParentFieldMapper extends MetadataFieldMapper {
             return;
         }
 
+        String fieldName = useNewFieldName() ? fieldType().names().indexName() : ParentFieldMapper.NAME;
         if (context.parser().currentName() != null && context.parser().currentName().equals(Defaults.NAME)) {
             // we are in the parsing of _parent phase
             String parentId = context.parser().text();
             context.sourceToParse().parent(parentId);
-            fields.add(new Field(fieldType().names().indexName(), Uid.createUid(context.stringBuilder(), type, parentId), fieldType()));
+            fields.add(new Field(fieldName, Uid.createUid(context.stringBuilder(), type, parentId), fieldType()));
             if (fieldType().hasDocValues()) {
                 fields.add(createJoinField(type, parentId));
             }
@@ -283,7 +291,7 @@ public class ParentFieldMapper extends MetadataFieldMapper {
                         throw new MapperParsingException("No parent id provided, not within the document, and not externally");
                     }
                     // we did not add it in the parsing phase, add it now
-                    fields.add(new Field(fieldType().names().indexName(), Uid.createUid(context.stringBuilder(), type, parentId), fieldType()));
+                    fields.add(new Field(fieldName, Uid.createUid(context.stringBuilder(), type, parentId), fieldType()));
                     if (fieldType().hasDocValues()) {
                         fields.add(createJoinField(type, parentId));
                     }
@@ -339,6 +347,13 @@ public class ParentFieldMapper extends MetadataFieldMapper {
      */
     public boolean active() {
         return type != null;
+    }
+
+    /**
+     * @return Whether the post 2.0 field naming should be used
+     */
+    public boolean useNewFieldName() {
+        return fieldType().hasDocValues();
     }
 
 }

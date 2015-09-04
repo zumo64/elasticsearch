@@ -63,6 +63,7 @@ import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.mapper.MappedFieldType.Loading;
 import org.elasticsearch.index.mapper.MapperService;
+import org.elasticsearch.index.mapper.internal.ParentFieldMapper;
 import org.elasticsearch.index.query.TemplateQueryParser;
 import org.elasticsearch.index.search.stats.ShardSearchStats;
 import org.elasticsearch.index.search.stats.StatsGroupsParseElement;
@@ -1001,7 +1002,10 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
                         continue;
                     }
 
-                    final String indexName = fieldMapper.fieldType().names().indexName();
+                    String indexName = fieldMapper.fieldType().names().indexName();
+                    if (indexName.startsWith(ParentFieldMapper.NAME)) {
+                        indexName = ParentFieldMapper.NAME;
+                    }
                     if (warmUp.containsKey(indexName)) {
                         continue;
                     }
@@ -1054,7 +1058,10 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
                     if (fieldDataType.getLoading() != Loading.EAGER_GLOBAL_ORDINALS) {
                         continue;
                     }
-                    final String indexName = fieldMapper.fieldType().names().indexName();
+                    String indexName = fieldMapper.fieldType().names().indexName();
+                    if (indexName.startsWith(ParentFieldMapper.NAME)) {
+                        indexName = ParentFieldMapper.NAME;
+                    }
                     if (warmUpGlobalOrdinals.containsKey(indexName)) {
                         continue;
                     }

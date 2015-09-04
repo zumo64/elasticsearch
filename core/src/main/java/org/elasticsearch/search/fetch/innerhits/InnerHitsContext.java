@@ -275,10 +275,12 @@ public final class InnerHitsContext {
 
         @Override
         public TopDocs topDocs(SearchContext context, FetchSubPhase.HitContext hitContext) throws IOException {
+            String parentIdField = documentMapper.parentFieldMapper().useNewFieldName() ? documentMapper.parentFieldMapper().fieldType().names().indexName() : ParentFieldMapper.NAME;;
+
             final String field;
             final String term;
             if (isParentHit(hitContext.hit())) {
-                field = ParentFieldMapper.NAME;
+                field = parentIdField;
                 term = Uid.createUid(hitContext.hit().type(), hitContext.hit().id());
             } else if (isChildHit(hitContext.hit())) {
                 DocumentMapper hitDocumentMapper = mapperService.documentMapper(hitContext.hit().type());

@@ -812,6 +812,13 @@ public abstract class QueryBuilders {
         return new QueryFilterBuilder(query);
     }
 
+    /**
+     * Returns a query builder for parent id query
+     */
+    public static ParentIdQueryBuilder parentIdQuery(String type, String id) {
+        return new ParentIdQueryBuilder(type, id);
+    }
+
     private QueryBuilders() {
 
     }

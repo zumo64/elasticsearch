@@ -208,15 +208,7 @@ public class ChildQuerySearchIT extends ESIntegTestCase {
         assertThat(searchResponse.getHits().getAt(0).field("_parent").value().toString(), equalTo("p1"));
 
         // TEST matching on parent
-        searchResponse = client().prepareSearch("test").setQuery(termQuery("_parent", "p1")).addFields("_parent").get();
-        assertNoFailures(searchResponse);
-        assertThat(searchResponse.getHits().totalHits(), equalTo(2l));
-        assertThat(searchResponse.getHits().getAt(0).id(), anyOf(equalTo("c1"), equalTo("c2")));
-        assertThat(searchResponse.getHits().getAt(0).field("_parent").value().toString(), equalTo("p1"));
-        assertThat(searchResponse.getHits().getAt(1).id(), anyOf(equalTo("c1"), equalTo("c2")));
-        assertThat(searchResponse.getHits().getAt(1).field("_parent").value().toString(), equalTo("p1"));
-
-        searchResponse = client().prepareSearch("test").setQuery(queryStringQuery("_parent:p1")).addFields("_parent").get();
+        searchResponse = client().prepareSearch("test").setQuery(parentIdQuery("child", "p1")).addFields("_parent").get();
         assertNoFailures(searchResponse);
         assertThat(searchResponse.getHits().totalHits(), equalTo(2l));
         assertThat(searchResponse.getHits().getAt(0).id(), anyOf(equalTo("c1"), equalTo("c2")));
@@ -972,7 +964,7 @@ public class ChildQuerySearchIT extends ESIntegTestCase {
     }
 
     @Test
-    public void testParentFieldFilter() throws Exception {
+    public void testParentIdQuery() throws Exception {
         assertAcked(prepareCreate("test")
                 .setSettings(settingsBuilder().put(indexSettings())
                         .put("index.refresh_interval", -1))
@@ -981,60 +973,31 @@ public class ChildQuerySearchIT extends ESIntegTestCase {
                 .addMapping("child2", "_parent", "type=parent"));
         ensureGreen();
 
-        // test term filter
-        SearchResponse response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termQuery("_parent", "p1")))
-                .get();
+        SearchResponse response = client().prepareSearch("test").setQuery(parentIdQuery("child", "p1")).get();
         assertHitCount(response, 0l);
 
         client().prepareIndex("test", "some_type", "1").setSource("field", "value").get();
         client().prepareIndex("test", "parent", "p1").setSource("p_field", "value").get();
         client().prepareIndex("test", "child", "c1").setSource("c_field", "value").setParent("p1").get();
 
-        response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termQuery("_parent", "p1"))).execute()
-                .actionGet();
+        response = client().prepareSearch("test").setQuery(parentIdQuery("child", "p1")).get();
         assertHitCount(response, 0l);
         refresh();
 
-        response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termQuery("_parent", "p1"))).execute()
-                .actionGet();
-        assertHitCount(response, 1l);
-
-        response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termQuery("_parent", "parent#p1"))).execute()
-                .actionGet();
+        response = client().prepareSearch("test").setQuery(parentIdQuery("child", "p1")).get();
         assertHitCount(response, 1l);
 
         client().prepareIndex("test", "parent2", "p1").setSource("p_field", "value").setRefresh(true).get();
-
-        response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termQuery("_parent", "p1"))).execute()
-                .actionGet();
+        response = client().prepareSearch("test").setQuery(parentIdQuery("child", "p1")).get();
         assertHitCount(response, 1l);
 
-        response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termQuery("_parent", "parent#p1"))).execute()
-                .actionGet();
-        assertHitCount(response, 1l);
-
-        // test terms filter
         client().prepareIndex("test", "child2", "c1").setSource("c_field", "value").setParent("p1").get();
-        response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termsQuery("_parent", "p1"))).execute()
-                .actionGet();
-        assertHitCount(response, 1l);
-
-        response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termsQuery("_parent", "parent#p1"))).execute()
-                .actionGet();
-        assertHitCount(response, 1l);
-
         refresh();
-        response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termsQuery("_parent", "p1"))).execute()
-                .actionGet();
+        response = client().prepareSearch("test").setQuery(parentIdQuery("child", "p1")).get();
         assertHitCount(response, 2l);
 
         refresh();
-        response = client().prepareSearch("test").setQuery(filteredQuery(matchAllQuery(), termsQuery("_parent", "p1", "p1"))).execute()
-                .actionGet();
-        assertHitCount(response, 2l);
-
-        response = client().prepareSearch("test")
-                .setQuery(filteredQuery(matchAllQuery(), termsQuery("_parent", "parent#p1", "parent2#p1"))).get();
+        response = client().prepareSearch("test").setQuery(parentIdQuery("child", "p1").addParentId("p1")).get();
         assertHitCount(response, 2l);
     }
 
@@ -1199,7 +1162,7 @@ public class ChildQuerySearchIT extends ESIntegTestCase {
                     .endObject().endObject()).get();
             fail();
         } catch (MergeMappingException e) {
-            assertThat(e.toString(), containsString("Merge failed with failures {[The _parent field's type option can't be changed: [null]->[parent]]}"));
+            assertThat(e.toString(), containsString("The _parent field's type option can't be changed: [null]->[parent]"));
         }
     }
 
@@ -1480,26 +1443,6 @@ public class ChildQuerySearchIT extends ESIntegTestCase {
                 .setSource("{\"query\": {\"has_child\": {\"query\": {\"match\": {\"field\": \"bar\"}}, \"type\": \"posts\"}}}").get();
         assertHitCount(resp, 1L);
 
-    }
-
-    @Test
-    // https://github.com/elasticsearch/elasticsearch/issues/6256
-    public void testParentFieldInMultiMatchField() throws Exception {
-        assertAcked(prepareCreate("test")
-                .addMapping("type1")
-                .addMapping("type2", "_parent", "type=type1")
-        );
-        ensureGreen();
-
-        client().prepareIndex("test", "type2", "1").setParent("1").setSource("field", "value").get();
-        refresh();
-
-        SearchResponse response = client().prepareSearch("test")
-                .setQuery(multiMatchQuery("1", "_parent"))
-                .get();
-
-        assertThat(response.getHits().totalHits(), equalTo(1l));
-        assertThat(response.getHits().getAt(0).id(), equalTo("1"));
     }
 
     @Test

@@ -221,9 +221,19 @@ public class IndexFieldDataService extends AbstractIndexComponent {
             throw new IllegalArgumentException("failed to find field data builder for field " + fieldNames.fullName() + ", and type " + type.getType());
         }
 
+        // Remove this in 3.0
+        final boolean isOldParentField = fieldNames.indexName().startsWith(ParentFieldMapper.NAME)
+                && Version.indexCreated(indexSettings).before(Version.V_2_0_0_beta1);
+        String key;
+        if (isOldParentField) {
+            key = ParentFieldMapper.NAME;
+        } else {
+            key = fieldNames.indexName();
+        }
+
         IndexFieldDataCache cache;
         synchronized (this) {
-            cache = fieldDataCaches.get(fieldNames.indexName());
+            cache = fieldDataCaches.get(key);
             if (cache == null) {
                 //  we default to node level cache, which in turn defaults to be unbounded
                 // this means changing the node level settings is simple, just set the bounds there
@@ -235,12 +245,9 @@ public class IndexFieldDataService extends AbstractIndexComponent {
                 } else {
                     throw new IllegalArgumentException("cache type not supported [" + cacheType + "] for field [" + fieldNames.fullName() + "]");
                 }
-                fieldDataCaches.put(fieldNames.indexName(), cache);
+                fieldDataCaches.put(key, cache);
             }
 
-            // Remove this in 3.0
-            final boolean isOldParentField = ParentFieldMapper.NAME.equals(fieldNames.indexName())
-                    && Version.indexCreated(indexSettings).before(Version.V_2_0_0_beta1);
             if (isOldParentField) {
                 if (parentIndexFieldData == null) {
                     parentIndexFieldData = builder.build(index, indexSettings, fieldType, cache, circuitBreakerService, indexService.mapperService());

@@ -41,3 +41,7 @@ It wasn't always faster than the `has_child` query and the was usually
 inaccurate. The total hits and any aggregations in the same search request
 would be incorrect if `top_children` was used.
 
+==== `_parent` field can't used directly in the dsl
+
+The `_parent` field can't be used directly in the queries, sort definitions and aggregations.
+For queries the new `parent_id` query should be used.

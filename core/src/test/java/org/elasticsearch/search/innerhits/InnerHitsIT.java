@@ -962,6 +962,7 @@ public class InnerHitsIT extends ESIntegTestCase {
                         .addInnerHit("kings", new InnerHitsBuilder.InnerHit().setType("king"))
                 )
                 .get();
+        assertNoFailures(response);
         assertHitCount(response, 1);
         assertThat(response.getHits().getAt(0).getId(), equalTo("duke"));
 

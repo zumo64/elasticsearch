@@ -19,7 +19,6 @@
 
 package org.elasticsearch.search;
 
-import org.elasticsearch.common.Classes;
 import org.elasticsearch.common.inject.AbstractModule;
 import org.elasticsearch.common.inject.multibindings.Multibinder;
 import org.elasticsearch.common.settings.Settings;
@@ -136,6 +135,7 @@ import org.elasticsearch.search.fetch.explain.ExplainFetchSubPhase;
 import org.elasticsearch.search.fetch.fielddata.FieldDataFieldsFetchSubPhase;
 import org.elasticsearch.search.fetch.innerhits.InnerHitsFetchSubPhase;
 import org.elasticsearch.search.fetch.matchedqueries.MatchedQueriesFetchSubPhase;
+import org.elasticsearch.search.fetch.parent.ParenFieldSubFetchPhase;
 import org.elasticsearch.search.fetch.script.ScriptFieldsFetchSubPhase;
 import org.elasticsearch.search.fetch.source.FetchSourceSubPhase;
 import org.elasticsearch.search.fetch.version.VersionFetchSubPhase;
@@ -143,8 +143,6 @@ import org.elasticsearch.search.highlight.HighlightPhase;
 import org.elasticsearch.search.highlight.Highlighter;
 import org.elasticsearch.search.highlight.Highlighters;
 import org.elasticsearch.search.query.QueryPhase;
-import org.elasticsearch.search.suggest.SuggestParseElement;
-import org.elasticsearch.search.suggest.SuggestPhase;
 import org.elasticsearch.search.suggest.Suggester;
 import org.elasticsearch.search.suggest.Suggesters;
 
@@ -237,6 +235,7 @@ public class SearchModule extends AbstractModule {
         fetchSubPhaseMultibinder.addBinding().to(VersionFetchSubPhase.class);
         fetchSubPhaseMultibinder.addBinding().to(MatchedQueriesFetchSubPhase.class);
         fetchSubPhaseMultibinder.addBinding().to(HighlightPhase.class);
+        fetchSubPhaseMultibinder.addBinding().to(ParenFieldSubFetchPhase.class);
         for (Class<? extends FetchSubPhase> clazz : fetchSubPhases) {
             fetchSubPhaseMultibinder.addBinding().to(clazz);
         }

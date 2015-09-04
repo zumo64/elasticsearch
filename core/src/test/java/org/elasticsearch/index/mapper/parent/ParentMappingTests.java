@@ -18,16 +18,15 @@
  */
 package org.elasticsearch.index.mapper.parent;
 
+import org.apache.lucene.index.IndexableField;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.index.mapper.DocumentMapper;
-import org.elasticsearch.index.mapper.ParsedDocument;
-import org.elasticsearch.index.mapper.SourceToParse;
-import org.elasticsearch.index.mapper.Uid;
+import org.elasticsearch.index.mapper.*;
 import org.elasticsearch.test.ESSingleNodeTestCase;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.nullValue;
 
 public class ParentMappingTests extends ESSingleNodeTestCase {
@@ -39,14 +38,16 @@ public class ParentMappingTests extends ESSingleNodeTestCase {
 
         ParsedDocument doc = docMapper.parse(SourceToParse.source(XContentFactory.jsonBuilder()
                 .startObject()
-                .field("_parent", "1122")
                 .field("x_field", "x_value")
                 .endObject()
-                .bytes()).type("type").id("1"));
+                .bytes()).type("type").id("1").parent("1122"));
 
         // no _parent mapping, dynamically used as a string field
-        assertNull(doc.parent());
-        assertNotNull(doc.rootDoc().get("_parent"));
+        for (IndexableField indexableField : doc.rootDoc()) {
+            if (indexableField.name().startsWith("_parent")) {
+                fail("field [" + indexableField.name() + "] shouldn't exist");
+            }
+        }
     }
 
     public void testParentSetInDocBackcompat() throws Exception {
@@ -79,6 +80,6 @@ public class ParentMappingTests extends ESSingleNodeTestCase {
                 .endObject()
                 .bytes()).type("type").id("1").parent("1122"));
 
-        assertEquals(Uid.createUid("p_type", "1122"), doc.rootDoc().get("_parent"));
+        assertEquals(Uid.createUid("p_type", "1122"), doc.rootDoc().get("_parent#p_type"));
     }
 }

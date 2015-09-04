@@ -49,7 +49,7 @@ import java.util.Set;
 import static com.google.common.collect.Maps.newHashMap;
 
 /**
- * Base {@link StoredFieldsVisitor} that retrieves all non-redundant metadata.
+ * Base {@link StoredFieldVisitor} that retrieves all non-redundant metadata.
  */
 public class FieldsVisitor extends StoredFieldVisitor {
 
