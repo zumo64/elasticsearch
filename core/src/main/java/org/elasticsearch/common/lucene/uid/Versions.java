@@ -19,13 +19,16 @@
 
 package org.elasticsearch.common.lucene.uid;
 
+import org.apache.lucene.index.FilterDirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexReader.ReaderClosedListener;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.util.CloseableThreadLocal;
+import org.elasticsearch.common.lucene.index.ElasticsearchDirectoryReader;
 import org.elasticsearch.common.util.concurrent.ConcurrentCollections;
 import org.elasticsearch.index.mapper.internal.UidFieldMapper;
+import org.elasticsearch.index.shard.ShardUtils;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
@@ -52,6 +55,15 @@ public class Versions {
     };
 
     private static PerThreadIDAndVersionLookup getLookupState(IndexReader reader) throws IOException {
+        if (reader instanceof FilterDirectoryReader) {
+            if (!(reader instanceof ElasticsearchDirectoryReader)) {
+                ElasticsearchDirectoryReader directoryReader = ShardUtils.getElasticsearchDirectoryReader(reader);
+                if (directoryReader != null) {
+                    reader = directoryReader;
+                }
+            }
+        }
+
         CloseableThreadLocal<PerThreadIDAndVersionLookup> ctl = lookupStates.get(reader);
         if (ctl == null) {
             // First time we are seeing this reader; make a

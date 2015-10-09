@@ -73,7 +73,7 @@ public final class ShardUtils {
         return null;
     }
 
-    private static ElasticsearchDirectoryReader getElasticsearchDirectoryReader(IndexReader reader) {
+    public static ElasticsearchDirectoryReader getElasticsearchDirectoryReader(IndexReader reader) {
         if (reader instanceof FilterDirectoryReader) {
             if (reader instanceof ElasticsearchDirectoryReader) {
                 return (ElasticsearchDirectoryReader) reader;
