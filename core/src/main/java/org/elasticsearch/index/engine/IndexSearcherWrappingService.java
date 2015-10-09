@@ -25,6 +25,7 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.index.engine.Engine.Searcher;
 
+import java.io.IOException;
 import java.util.Set;
 
 /**
@@ -69,7 +70,7 @@ public final class IndexSearcherWrappingService {
             return engineSearcher;
         }
 
-        DirectoryReader reader = wrapper.wrap((DirectoryReader) engineSearcher.reader());
+        final DirectoryReader reader = wrapper.wrap((DirectoryReader) engineSearcher.reader());
         IndexSearcher innerIndexSearcher = new IndexSearcher(reader);
         innerIndexSearcher.setQueryCache(engineConfig.getQueryCache());
         innerIndexSearcher.setQueryCachingPolicy(engineConfig.getQueryCachingPolicy());
@@ -86,6 +87,11 @@ public final class IndexSearcherWrappingService {
                 @Override
                 public void close() throws ElasticsearchException {
                     engineSearcher.close();
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        throw new ElasticsearchException("error while closing", e);
+                    }
                 }
             };
         }
