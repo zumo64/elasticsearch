@@ -33,6 +33,8 @@ import org.elasticsearch.index.mapper.MappedFieldType.Names;
 import org.elasticsearch.search.MultiValueMode;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
 
+import java.io.IOException;
+
 public class SortedSetDVOrdinalsIndexFieldData extends DocValuesIndexFieldData implements IndexOrdinalsFieldData {
 
     private final Settings indexSettings;
@@ -66,6 +68,20 @@ public class SortedSetDVOrdinalsIndexFieldData extends DocValuesIndexFieldData i
         if (indexReader.leaves().size() <= 1) {
             // ordinals are already global
             return this;
+        }
+        boolean fieldFound = false;
+        for (LeafReaderContext context : indexReader.leaves()) {
+            if (context.reader().getFieldInfos().fieldInfo(getFieldNames().indexName()) != null) {
+                fieldFound = true;
+                break;
+            }
+        }
+        if (fieldFound == false) {
+            try {
+                return GlobalOrdinalsBuilder.buildEmpty(indexReader, this, indexSettings);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
         try {
             return cache.load(indexReader, this);

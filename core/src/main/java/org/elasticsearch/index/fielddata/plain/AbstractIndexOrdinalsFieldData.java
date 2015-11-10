@@ -64,6 +64,20 @@ public abstract class AbstractIndexOrdinalsFieldData extends AbstractIndexFieldD
             // ordinals are already global
             return this;
         }
+        boolean fieldFound = false;
+        for (LeafReaderContext context : indexReader.leaves()) {
+            if (context.reader().getFieldInfos().fieldInfo(getFieldNames().indexName()) != null) {
+                fieldFound = true;
+                break;
+            }
+        }
+        if (fieldFound == false) {
+            try {
+                return GlobalOrdinalsBuilder.buildEmpty(indexReader, this, indexSettings);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         try {
             return cache.load(indexReader, this);
         } catch (Throwable e) {
@@ -81,7 +95,7 @@ public abstract class AbstractIndexOrdinalsFieldData extends AbstractIndexFieldD
     }
 
     @Override
-    protected AtomicOrdinalsFieldData empty(int maxDoc) {
+    public AtomicOrdinalsFieldData empty(int maxDoc) {
         return AbstractAtomicOrdinalsFieldData.empty();
     }
 
