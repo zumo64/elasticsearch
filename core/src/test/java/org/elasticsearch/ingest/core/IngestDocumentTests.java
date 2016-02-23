@@ -35,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.both;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -972,9 +973,25 @@ public class IngestDocumentTests extends ESTestCase {
         recursiveEqualsButNotSameCheck(ingestDocument.getSourceAndMetadata(), copy.getSourceAndMetadata());
     }
 
+    public void testSetInvalidSourceField() throws Exception {
+        Map<String, Object> document = new HashMap<>();
+        Object randomObject = randomFrom(new ArrayList<>(), new HashMap<>(), 12, 12.34);
+        document.put("source_field", randomObject);
+
+        IngestDocument ingestDocument = RandomDocumentPicks.randomIngestDocument(random(), document);
+        try {
+            ingestDocument.getFieldValueAsBytes("source_field");
+            fail("Expected an exception due to invalid source field, but did not happen");
+        } catch (IllegalArgumentException e) {
+            String expectedClassName = randomObject.getClass().getName();
+
+            assertThat(e.getMessage(),
+                containsString("field [source_field] of unknown type [" + expectedClassName + "], must be string or byte array"));
+        }
+    }
+
     private void recursiveEqualsButNotSameCheck(Object a, Object b) {
         assertThat(a, not(sameInstance(b)));
-        assertThat(a, equalTo(b));
         if (a instanceof Map) {
             Map<?, ?> mapA = (Map<?, ?>) a;
             Map<?, ?> mapB = (Map<?, ?>) b;
@@ -992,8 +1009,10 @@ public class IngestDocumentTests extends ESTestCase {
                     recursiveEqualsButNotSameCheck(value, listB.get(i));
                 }
             }
+        } else if (a instanceof byte[]) {
+            assertArrayEquals((byte[]) a, (byte[]) b);
+        } else {
+            assertThat(a, equalTo(b));
         }
-
     }
-
 }
