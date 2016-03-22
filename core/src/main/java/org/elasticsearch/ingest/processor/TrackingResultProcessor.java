@@ -24,6 +24,7 @@ import org.elasticsearch.ingest.core.CompoundProcessor;
 import org.elasticsearch.ingest.core.IngestDocument;
 import org.elasticsearch.ingest.core.Processor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,32 +38,17 @@ public final class TrackingResultProcessor implements Processor {
 
     public TrackingResultProcessor(Processor actualProcessor, List<SimulateProcessorResult> processorResultList) {
         this.processorResultList = processorResultList;
-        if (actualProcessor instanceof CompoundProcessor) {
-            CompoundProcessor actualCompoundProcessor = (CompoundProcessor) actualProcessor;
-            List<Processor> trackedProcessors = actualCompoundProcessor.getProcessors().stream()
-                    .map(p -> new TrackingResultProcessor(p, processorResultList))
-                    .collect(Collectors.toList());
-            List<Processor> trackedOnFailureProcessors = actualCompoundProcessor.getOnFailureProcessors().stream()
-                    .map(p -> new TrackingResultProcessor(p, processorResultList)).collect(Collectors.toList());
-            CompoundProcessor trackedCompoundProcessor = new CompoundProcessor(trackedProcessors,trackedOnFailureProcessors);
-            this.actualProcessor = trackedCompoundProcessor;
-        } else {
-            this.actualProcessor = actualProcessor;
-        }
+        this.actualProcessor = actualProcessor;
     }
 
     @Override
     public void execute(IngestDocument ingestDocument) throws Exception {
-        if (actualProcessor instanceof CompoundProcessor) {
+        try {
             actualProcessor.execute(ingestDocument);
-        } else {
-            try {
-                actualProcessor.execute(ingestDocument);
-                processorResultList.add(new SimulateProcessorResult(actualProcessor.getTag(), new IngestDocument(ingestDocument)));
-            } catch (Exception e) {
-                processorResultList.add(new SimulateProcessorResult(actualProcessor.getTag(), e));
-                throw e;
-            }
+            processorResultList.add(new SimulateProcessorResult(actualProcessor.getTag(), new IngestDocument(ingestDocument)));
+        } catch (Exception e) {
+            processorResultList.add(new SimulateProcessorResult(actualProcessor.getTag(), e));
+            throw e;
         }
     }
 
@@ -74,6 +60,26 @@ public final class TrackingResultProcessor implements Processor {
     @Override
     public String getTag() {
         return actualProcessor.getTag();
+    }
+
+    public static CompoundProcessor decorate(CompoundProcessor compoundProcessor, List<SimulateProcessorResult> processorResultList) {
+        List<Processor> processors = new ArrayList<>(compoundProcessor.getProcessors().size());
+        for (Processor processor : compoundProcessor.getProcessors()) {
+            if (processor instanceof CompoundProcessor) {
+                processors.add(decorate((CompoundProcessor) processor, processorResultList));
+            } else {
+                processors.add(new TrackingResultProcessor(processor, processorResultList));
+            }
+        }
+        List<Processor> onFailureProcessors = new ArrayList<>(compoundProcessor.getProcessors().size());
+        for (Processor processor : compoundProcessor.getOnFailureProcessors()) {
+            if (processor instanceof CompoundProcessor) {
+                onFailureProcessors.add(decorate((CompoundProcessor) processor, processorResultList));
+            } else {
+                onFailureProcessors.add(new TrackingResultProcessor(processor, processorResultList));
+            }
+        }
+        return new CompoundProcessor(processors, onFailureProcessors);
     }
 }
 

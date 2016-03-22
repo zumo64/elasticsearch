@@ -83,6 +83,10 @@ public final class Pipeline {
         return compoundProcessor.getOnFailureProcessors();
     }
 
+    public CompoundProcessor getCompoundProcessor() {
+        return compoundProcessor;
+    }
+
     /**
      * Flattens the normal and on failure processors into a single list. The original order is lost.
      * This can be useful for pipeline validation purposes.

@@ -68,7 +68,7 @@ public class TrackingResultProcessorTests extends ESTestCase {
         RuntimeException exception = new RuntimeException("processor failed");
         TestProcessor testProcessor = new TestProcessor(ingestDocument -> {  throw exception; });
         CompoundProcessor actualProcessor = new CompoundProcessor(testProcessor);
-        TrackingResultProcessor trackingProcessor = new TrackingResultProcessor(actualProcessor, resultList);
+        CompoundProcessor trackingProcessor = TrackingResultProcessor.decorate(actualProcessor, resultList);
 
         try {
             trackingProcessor.execute(ingestDocument);
@@ -89,7 +89,7 @@ public class TrackingResultProcessorTests extends ESTestCase {
         TestProcessor testProcessor = new TestProcessor(ingestDocument -> {  throw exception; });
         TestProcessor testOnFailureProcessor = new TestProcessor(ingestDocument -> {});
         CompoundProcessor actualProcessor = new CompoundProcessor(Arrays.asList(testProcessor), Arrays.asList(testOnFailureProcessor));
-        TrackingResultProcessor trackingProcessor = new TrackingResultProcessor(actualProcessor, resultList);
+        CompoundProcessor trackingProcessor = TrackingResultProcessor.decorate(actualProcessor, resultList);
         trackingProcessor.execute(ingestDocument);
 
         SimulateProcessorResult expectedFirstResult = new SimulateProcessorResult(testProcessor.getTag(), ingestDocument);

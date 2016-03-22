@@ -43,11 +43,9 @@ class SimulateExecutionService {
     SimulateDocumentResult executeDocument(Pipeline pipeline, IngestDocument ingestDocument, boolean verbose) {
         if (verbose) {
             List<SimulateProcessorResult> processorResultList = new ArrayList<>();
-            TrackingResultProcessor verbosePipelineProcessor = new TrackingResultProcessor(
-                    new CompoundProcessor(pipeline.getProcessors(), pipeline.getOnFailureProcessors()),
-                    processorResultList);
+            CompoundProcessor decoratedProcessors = TrackingResultProcessor.decorate(pipeline.getCompoundProcessor(), processorResultList);
             try {
-                verbosePipelineProcessor.execute(ingestDocument);
+                decoratedProcessors.execute(ingestDocument);
                 return new SimulateDocumentVerboseResult(processorResultList);
             } catch (Exception e) {
                 return new SimulateDocumentVerboseResult(processorResultList);
