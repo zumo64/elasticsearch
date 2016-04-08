@@ -23,7 +23,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.ingest.RandomDocumentPicks;
 import org.elasticsearch.ingest.TestProcessor;
 import org.elasticsearch.ingest.core.CompoundProcessor;
-import org.elasticsearch.ingest.core.Processor;
 import org.elasticsearch.ingest.core.IngestDocument;
 import org.elasticsearch.ingest.core.Pipeline;
 import org.elasticsearch.test.ESTestCase;
@@ -44,7 +43,6 @@ public class SimulateExecutionServiceTests extends ESTestCase {
 
     private ThreadPool threadPool;
     private SimulateExecutionService executionService;
-    private Processor processor;
     private IngestDocument ingestDocument;
 
     @Before
@@ -55,7 +53,6 @@ public class SimulateExecutionServiceTests extends ESTestCase {
                         .build()
         );
         executionService = new SimulateExecutionService(threadPool);
-        processor = new TestProcessor("id", "mock", ingestDocument -> {});
         ingestDocument = RandomDocumentPicks.randomIngestDocument(random());
     }
 

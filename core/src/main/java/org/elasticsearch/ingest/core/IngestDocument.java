@@ -540,8 +540,54 @@ public final class IngestDocument {
         }
 
         IngestDocument other = (IngestDocument) obj;
-        return Objects.equals(sourceAndMetadata, other.sourceAndMetadata) &&
+        return Objects.equals(convertIfNeeded(sourceAndMetadata), convertIfNeeded(other.sourceAndMetadata)) &&
                 Objects.equals(ingestMetadata, other.ingestMetadata);
+    }
+
+    private Object convertIfNeeded(Object obj) {
+        if (obj instanceof Map) {
+            Map<Object, Object> map = (Map<Object, Object>) obj;
+            Map<Object, Object> convertedMap = new HashMap<>(map.size());
+            for (Map.Entry<Object, Object> entry : map.entrySet()) {
+                convertedMap.put(entry.getKey(), convertIfNeeded(entry.getValue()));
+            }
+            return convertedMap;
+        } else if (obj instanceof List) {
+            List<Object> list = (List<Object>) obj;
+            List<Object> convertedList = new ArrayList<>(list.size());
+            for (Object o : list) {
+                convertedList.add(convertIfNeeded(o));
+            }
+            return convertedList;
+        } else if (obj instanceof byte[]) {
+            return new ByteArray((byte[]) obj);
+        }
+        return obj;
+    }
+
+    private final class ByteArray {
+
+        private byte[] bytes;
+
+        public ByteArray(byte[] bytes) {
+            this.bytes = bytes;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) { return true; }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+
+            ByteArray other = (ByteArray) obj;
+            return Arrays.equals(bytes, other.bytes);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(bytes);
+        }
     }
 
     @Override

@@ -970,7 +970,8 @@ public class IngestDocumentTests extends ESTestCase {
     public void testCopyConstructor() {
         IngestDocument ingestDocument = RandomDocumentPicks.randomIngestDocument(random());
         IngestDocument copy = new IngestDocument(ingestDocument);
-        recursiveEqualsButNotSameCheck(ingestDocument.getSourceAndMetadata(), copy.getSourceAndMetadata());
+        assertThat(ingestDocument.getSourceAndMetadata(), not(sameInstance(copy.getSourceAndMetadata())));
+        assertThat(ingestDocument, equalTo(copy));
     }
 
     public void testSetInvalidSourceField() throws Exception {
@@ -987,32 +988,6 @@ public class IngestDocumentTests extends ESTestCase {
 
             assertThat(e.getMessage(),
                 containsString("field [source_field] of unknown type [" + expectedClassName + "], must be string or byte array"));
-        }
-    }
-
-    private void recursiveEqualsButNotSameCheck(Object a, Object b) {
-        assertThat(a, not(sameInstance(b)));
-        if (a instanceof Map) {
-            Map<?, ?> mapA = (Map<?, ?>) a;
-            Map<?, ?> mapB = (Map<?, ?>) b;
-            for (Map.Entry<?, ?> entry : mapA.entrySet()) {
-                if (entry.getValue() instanceof List || entry.getValue() instanceof Map) {
-                    recursiveEqualsButNotSameCheck(entry.getValue(), mapB.get(entry.getKey()));
-                }
-            }
-        } else if (a instanceof List) {
-            List<?> listA = (List<?>) a;
-            List<?> listB = (List<?>) b;
-            for (int i = 0; i < listA.size(); i++) {
-                Object value = listA.get(i);
-                if (value instanceof List || value instanceof Map) {
-                    recursiveEqualsButNotSameCheck(value, listB.get(i));
-                }
-            }
-        } else if (a instanceof byte[]) {
-            assertArrayEquals((byte[]) a, (byte[]) b);
-        } else {
-            assertThat(a, equalTo(b));
         }
     }
 }
