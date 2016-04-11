@@ -1000,6 +1000,11 @@ public class IngestDocumentTests extends ESTestCase {
             }
         } else if (a instanceof byte[]) {
             assertArrayEquals((byte[]) a, (byte[])b);
+        } else if (a instanceof IngestDocument) {
+            IngestDocument docA = (IngestDocument) a;
+            IngestDocument docB = (IngestDocument) b;
+            recursiveEqualsButNotSameCheck(docA.getSourceAndMetadata(), docB.getSourceAndMetadata());
+            recursiveEqualsButNotSameCheck(docA.getIngestMetadata(), docB.getIngestMetadata());
         } else {
             String msg = String.format(Locale.ROOT, "Expected %s class to be equal to %s", a.getClass().getName(), b.getClass().getName());
             assertThat(msg, a, equalTo(b));
