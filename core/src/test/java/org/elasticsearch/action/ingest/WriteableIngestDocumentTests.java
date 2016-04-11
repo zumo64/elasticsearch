@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.elasticsearch.common.xcontent.ToXContent.EMPTY_PARAMS;
+import static org.elasticsearch.ingest.core.IngestDocumentTests.recursiveEqualsButNotSameCheck;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -107,14 +108,14 @@ public class WriteableIngestDocumentTests extends ESTestCase {
         for (int i = 0; i < numFields; i++) {
             ingestMetadata.put(randomAsciiOfLengthBetween(5, 10), randomAsciiOfLengthBetween(5, 10));
         }
-        Map<String, Object> document = RandomDocumentPicks.randomSource(random());
         WriteableIngestDocument writeableIngestDocument = new WriteableIngestDocument(new IngestDocument(sourceAndMetadata, ingestMetadata));
 
         BytesStreamOutput out = new BytesStreamOutput();
         writeableIngestDocument.writeTo(out);
         StreamInput streamInput = StreamInput.wrap(out.bytes());
         WriteableIngestDocument otherWriteableIngestDocument = new WriteableIngestDocument(streamInput);
-        assertThat(otherWriteableIngestDocument, equalTo(writeableIngestDocument));
+        recursiveEqualsButNotSameCheck(otherWriteableIngestDocument.getIngestDocument().getSourceAndMetadata(),
+                writeableIngestDocument.getIngestDocument().getSourceAndMetadata());
     }
 
     @SuppressWarnings("unchecked")
