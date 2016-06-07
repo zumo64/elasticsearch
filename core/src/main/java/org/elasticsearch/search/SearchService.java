@@ -39,7 +39,6 @@ import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.ParseFieldMatcher;
-import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.lucene.Lucene;
@@ -153,16 +152,12 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> imp
     private final Map<String, SearchParseElement> elementParsers;
 
     private final ParseFieldMatcher parseFieldMatcher;
-    private final AggregatorParsers aggParsers;
-    private final Suggesters suggesters;
 
     @Inject
     public SearchService(Settings settings, ClusterSettings clusterSettings, ClusterService clusterService, IndicesService indicesService,
                          ThreadPool threadPool, ScriptService scriptService, BigArrays bigArrays, DfsPhase dfsPhase,
-                         QueryPhase queryPhase, FetchPhase fetchPhase, AggregatorParsers aggParsers, Suggesters suggesters) {
+                         QueryPhase queryPhase, FetchPhase fetchPhase) {
         super(settings);
-        this.aggParsers = aggParsers;
-        this.suggesters = suggesters;
         this.parseFieldMatcher = new ParseFieldMatcher(settings);
         this.threadPool = threadPool;
         this.clusterService = clusterService;
@@ -557,16 +552,6 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> imp
             if (request.scroll() != null) {
                 context.scrollContext(new ScrollContext());
                 context.scrollContext().scroll = request.scroll();
-            }
-            if (request.template() != null) {
-                ExecutableScript executable = this.scriptService.executable(request.template(), ScriptContext.Standard.SEARCH,
-                        Collections.emptyMap(), context.getQueryShardContext().getClusterState());
-                BytesReference run = (BytesReference) executable.run();
-                try (XContentParser parser = XContentFactory.xContent(run).createParser(run)) {
-                    QueryParseContext queryParseContext = new QueryParseContext(indicesService.getIndicesQueryRegistry(), parser,
-                            parseFieldMatcher);
-                    parseSource(context, SearchSourceBuilder.fromXContent(queryParseContext, aggParsers, suggesters));
-                }
             }
             parseSource(context, request.source());
 

@@ -22,8 +22,6 @@ package org.elasticsearch.action.search;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.common.ParseFieldMatcher;
 import org.elasticsearch.common.bytes.BytesArray;
-import org.elasticsearch.common.collect.Tuple;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -31,20 +29,18 @@ import org.elasticsearch.index.query.MatchAllQueryBuilder;
 import org.elasticsearch.index.query.QueryParser;
 import org.elasticsearch.indices.query.IndicesQueriesRegistry;
 import org.elasticsearch.rest.action.search.RestMultiSearchAction;
-import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.StreamsUtils;
 
 import java.io.IOException;
 
-import static java.util.Collections.singletonMap;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 
 public class MultiSearchRequestTests extends ESTestCase {
     public void testSimpleAdd() throws Exception {
         byte[] data = StreamsUtils.copyToBytesFromClasspath("/org/elasticsearch/action/search/simple-msearch1.json");
-        MultiSearchRequest request = RestMultiSearchAction.parseRequest(new MultiSearchRequest(), new BytesArray(data), false, null, null,
+        MultiSearchRequest request = RestMultiSearchAction.parseRequest(new MultiSearchRequest(), new BytesArray(data), null, null,
                 null, null, IndicesOptions.strictExpandOpenAndForbidClosed(), true, registry(), ParseFieldMatcher.EMPTY, null, null);
         assertThat(request.requests().size(), equalTo(8));
         assertThat(request.requests().get(0).indices()[0], equalTo("test"));
@@ -70,7 +66,7 @@ public class MultiSearchRequestTests extends ESTestCase {
 
     public void testSimpleAdd2() throws Exception {
         byte[] data = StreamsUtils.copyToBytesFromClasspath("/org/elasticsearch/action/search/simple-msearch2.json");
-        MultiSearchRequest request = RestMultiSearchAction.parseRequest(new MultiSearchRequest(), new BytesArray(data), false, null, null,
+        MultiSearchRequest request = RestMultiSearchAction.parseRequest(new MultiSearchRequest(), new BytesArray(data), null, null,
                 null, null, IndicesOptions.strictExpandOpenAndForbidClosed(), true, registry(), ParseFieldMatcher.EMPTY, null, null);
         assertThat(request.requests().size(), equalTo(5));
         assertThat(request.requests().get(0).indices()[0], equalTo("test"));
@@ -88,7 +84,7 @@ public class MultiSearchRequestTests extends ESTestCase {
 
     public void testSimpleAdd3() throws Exception {
         byte[] data = StreamsUtils.copyToBytesFromClasspath("/org/elasticsearch/action/search/simple-msearch3.json");
-        MultiSearchRequest request = RestMultiSearchAction.parseRequest(new MultiSearchRequest(), new BytesArray(data), false, null, null,
+        MultiSearchRequest request = RestMultiSearchAction.parseRequest(new MultiSearchRequest(), new BytesArray(data), null, null,
                 null, null, IndicesOptions.strictExpandOpenAndForbidClosed(), true, registry(), ParseFieldMatcher.EMPTY, null, null);
         assertThat(request.requests().size(), equalTo(4));
         assertThat(request.requests().get(0).indices()[0], equalTo("test0"));
@@ -107,7 +103,7 @@ public class MultiSearchRequestTests extends ESTestCase {
 
     public void testSimpleAdd4() throws Exception {
         byte[] data = StreamsUtils.copyToBytesFromClasspath("/org/elasticsearch/action/search/simple-msearch4.json");
-        MultiSearchRequest request = RestMultiSearchAction.parseRequest(new MultiSearchRequest(), new BytesArray(data), false, null, null,
+        MultiSearchRequest request = RestMultiSearchAction.parseRequest(new MultiSearchRequest(), new BytesArray(data), null, null,
                 null, null, IndicesOptions.strictExpandOpenAndForbidClosed(), true, registry(), ParseFieldMatcher.EMPTY, null, null);
         assertThat(request.requests().size(), equalTo(3));
         assertThat(request.requests().get(0).indices()[0], equalTo("test0"));
@@ -124,39 +120,6 @@ public class MultiSearchRequestTests extends ESTestCase {
         assertThat(request.requests().get(2).types()[0], equalTo("type2"));
         assertThat(request.requests().get(2).types()[1], equalTo("type1"));
         assertThat(request.requests().get(2).routing(), equalTo("123"));
-    }
-
-    public void testSimpleAdd5() throws Exception {
-        byte[] data = StreamsUtils.copyToBytesFromClasspath("/org/elasticsearch/action/search/simple-msearch5.json");
-        MultiSearchRequest request = RestMultiSearchAction.parseRequest(new MultiSearchRequest(), new BytesArray(data), true, null, null,
-                null, null, IndicesOptions.strictExpandOpenAndForbidClosed(), true, registry(), ParseFieldMatcher.EMPTY, null, null);
-        assertThat(request.requests().size(), equalTo(3));
-        assertThat(request.requests().get(0).indices()[0], equalTo("test0"));
-        assertThat(request.requests().get(0).indices()[1], equalTo("test1"));
-        assertThat(request.requests().get(0).requestCache(), equalTo(true));
-        assertThat(request.requests().get(0).preference(), nullValue());
-        assertThat(request.requests().get(1).indices()[0], equalTo("test2"));
-        assertThat(request.requests().get(1).indices()[1], equalTo("test3"));
-        assertThat(request.requests().get(1).types()[0], equalTo("type1"));
-        assertThat(request.requests().get(1).requestCache(), nullValue());
-        assertThat(request.requests().get(1).preference(), equalTo("_local"));
-        assertThat(request.requests().get(2).indices()[0], equalTo("test4"));
-        assertThat(request.requests().get(2).indices()[1], equalTo("test1"));
-        assertThat(request.requests().get(2).types()[0], equalTo("type2"));
-        assertThat(request.requests().get(2).types()[1], equalTo("type1"));
-        assertThat(request.requests().get(2).routing(), equalTo("123"));
-        assertNotNull(request.requests().get(0).template());
-        assertNotNull(request.requests().get(1).template());
-        assertNotNull(request.requests().get(2).template());
-        assertEquals(ScriptService.ScriptType.INLINE, request.requests().get(0).template().getType());
-        assertEquals(ScriptService.ScriptType.INLINE, request.requests().get(1).template().getType());
-        assertEquals(ScriptService.ScriptType.INLINE, request.requests().get(2).template().getType());
-        assertEquals("{\"query\":{\"match_{{template}}\":{}}}", request.requests().get(0).template().getScript());
-        assertEquals("{\"query\":{\"match_{{template}}\":{}}}", request.requests().get(1).template().getScript());
-        assertEquals("{\"query\":{\"match_{{template}}\":{}}}", request.requests().get(2).template().getScript());
-        assertEquals(1, request.requests().get(0).template().getParams().size());
-        assertEquals(1, request.requests().get(1).template().getParams().size());
-        assertEquals(1, request.requests().get(2).template().getParams().size());
     }
 
     public void testResponseErrorToXContent() throws IOException {

@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.elasticsearch.action.admin.cluster.validate.template;
+package org.elasticsearch.action.search.template;
 
 import org.elasticsearch.action.Action;
 import org.elasticsearch.client.ElasticsearchClient;
 
-public class RenderSearchTemplateAction extends Action<RenderSearchTemplateRequest, RenderSearchTemplateResponse, RenderSearchTemplateRequestBuilder> {
+public class RenderSearchTemplateAction
+        extends Action<RenderSearchTemplateRequest, RenderSearchTemplateResponse, RenderSearchTemplateRequestBuilder> {
 
     public static final RenderSearchTemplateAction INSTANCE = new RenderSearchTemplateAction();
     public static final String NAME = "cluster:admin/render/template/search";
@@ -40,5 +41,4 @@ public class RenderSearchTemplateAction extends Action<RenderSearchTemplateReque
     public RenderSearchTemplateResponse newResponse() {
         return new RenderSearchTemplateResponse();
     }
-
 }

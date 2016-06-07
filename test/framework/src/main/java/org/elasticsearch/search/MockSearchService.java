@@ -27,12 +27,10 @@ import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.script.ScriptService;
-import org.elasticsearch.search.aggregations.AggregatorParsers;
 import org.elasticsearch.search.dfs.DfsPhase;
 import org.elasticsearch.search.fetch.FetchPhase;
 import org.elasticsearch.search.internal.SearchContext;
 import org.elasticsearch.search.query.QueryPhase;
-import org.elasticsearch.search.suggest.Suggesters;
 import org.elasticsearch.threadpool.ThreadPool;
 
 import java.util.HashMap;
@@ -84,10 +82,9 @@ public class MockSearchService extends SearchService {
     @Inject
     public MockSearchService(Settings settings, ClusterSettings clusterSettings, ClusterService clusterService,
             IndicesService indicesService, ThreadPool threadPool, ScriptService scriptService,
-            BigArrays bigArrays, DfsPhase dfsPhase, QueryPhase queryPhase, FetchPhase fetchPhase,
-            AggregatorParsers aggParsers, Suggesters suggesters) {
+            BigArrays bigArrays, DfsPhase dfsPhase, QueryPhase queryPhase, FetchPhase fetchPhase) {
         super(settings, clusterSettings, clusterService, indicesService, threadPool, scriptService, bigArrays, dfsPhase,
-                queryPhase, fetchPhase, aggParsers, suggesters);
+                queryPhase, fetchPhase);
     }
 
     @Override

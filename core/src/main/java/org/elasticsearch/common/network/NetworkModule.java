@@ -65,11 +65,8 @@ import org.elasticsearch.rest.action.admin.cluster.snapshots.restore.RestRestore
 import org.elasticsearch.rest.action.admin.cluster.snapshots.status.RestSnapshotsStatusAction;
 import org.elasticsearch.rest.action.admin.cluster.state.RestClusterStateAction;
 import org.elasticsearch.rest.action.admin.cluster.stats.RestClusterStatsAction;
-import org.elasticsearch.rest.action.admin.cluster.storedscripts.RestDeleteSearchTemplateAction;
 import org.elasticsearch.rest.action.admin.cluster.storedscripts.RestDeleteStoredScriptAction;
-import org.elasticsearch.rest.action.admin.cluster.storedscripts.RestGetSearchTemplateAction;
 import org.elasticsearch.rest.action.admin.cluster.storedscripts.RestGetStoredScriptAction;
-import org.elasticsearch.rest.action.admin.cluster.storedscripts.RestPutSearchTemplateAction;
 import org.elasticsearch.rest.action.admin.cluster.storedscripts.RestPutStoredScriptAction;
 import org.elasticsearch.rest.action.admin.cluster.tasks.RestPendingClusterTasksAction;
 import org.elasticsearch.rest.action.admin.indices.RestShrinkIndexAction;
@@ -106,7 +103,6 @@ import org.elasticsearch.rest.action.admin.indices.template.head.RestHeadIndexTe
 import org.elasticsearch.rest.action.admin.indices.template.put.RestPutIndexTemplateAction;
 import org.elasticsearch.rest.action.admin.indices.upgrade.RestUpgradeAction;
 import org.elasticsearch.rest.action.admin.indices.validate.query.RestValidateQueryAction;
-import org.elasticsearch.rest.action.admin.indices.validate.template.RestRenderSearchTemplateAction;
 import org.elasticsearch.rest.action.bulk.RestBulkAction;
 import org.elasticsearch.rest.action.cat.AbstractCatAction;
 import org.elasticsearch.rest.action.cat.RestAliasAction;
@@ -252,7 +248,6 @@ public class NetworkModule extends AbstractModule {
         RestSearchScrollAction.class,
         RestClearScrollAction.class,
         RestMultiSearchAction.class,
-        RestRenderSearchTemplateAction.class,
 
         RestValidateQueryAction.class,
 
@@ -260,12 +255,7 @@ public class NetworkModule extends AbstractModule {
 
         RestRecoveryAction.class,
 
-        // Templates API
-        RestGetSearchTemplateAction.class,
-        RestPutSearchTemplateAction.class,
-        RestDeleteSearchTemplateAction.class,
-
-        // Scripts API
+            // Scripts API
         RestGetStoredScriptAction.class,
         RestPutStoredScriptAction.class,
         RestDeleteStoredScriptAction.class,
