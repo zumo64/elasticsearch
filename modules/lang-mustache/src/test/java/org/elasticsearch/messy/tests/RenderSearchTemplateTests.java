@@ -19,8 +19,8 @@
 
 package org.elasticsearch.messy.tests;
 
-import org.elasticsearch.action.search.template.RenderSearchTemplateRequestBuilder;
-import org.elasticsearch.action.search.template.RenderSearchTemplateResponse;
+import org.elasticsearch.action.search.template.SearchTemplateRequestBuilder;
+import org.elasticsearch.action.search.template.SearchTemplateResponse;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.settings.Settings;
@@ -84,9 +84,10 @@ public class RenderSearchTemplateTests extends ESIntegTestCase {
         Map<String, Object> params = new HashMap<>();
         params.put("value", "bar");
         params.put("size", 20);
-        RenderSearchTemplateResponse response = prepareRenderSearchTemplate(TEMPLATE_CONTENTS, ScriptType.INLINE, params).get();
+        SearchTemplateResponse response = prepareRenderSearchTemplate(TEMPLATE_CONTENTS, ScriptType.INLINE, params).get();
         assertThat(response, notNullValue());
-        BytesReference source = response.source();
+        assertFalse(response.hasResponse());
+        BytesReference source = response.getSource();
         assertThat(source, notNullValue());
         Map<String, Object> sourceAsMap = XContentHelper.convertToMap(source, false).v2();
         assertThat(sourceAsMap, notNullValue());
@@ -99,7 +100,8 @@ public class RenderSearchTemplateTests extends ESIntegTestCase {
         params.put("size", 100);
         response = prepareRenderSearchTemplate(TEMPLATE_CONTENTS, ScriptType.INLINE, params).get();
         assertThat(response, notNullValue());
-        source = response.source();
+        assertFalse(response.hasResponse());
+        source = response.getSource();
         assertThat(source, notNullValue());
         sourceAsMap = XContentHelper.convertToMap(source, false).v2();
         expected = TEMPLATE_CONTENTS.replace("{{value}}", "baz").replace("{{size}}", "100");
@@ -111,9 +113,10 @@ public class RenderSearchTemplateTests extends ESIntegTestCase {
         Map<String, Object> params = new HashMap<>();
         params.put("value", "bar");
         params.put("size", 20);
-        RenderSearchTemplateResponse response = prepareRenderSearchTemplate("index_template_1", ScriptType.STORED, params).get();
+        SearchTemplateResponse response = prepareRenderSearchTemplate("index_template_1", ScriptType.STORED, params).get();
         assertThat(response, notNullValue());
-        BytesReference source = response.source();
+        assertFalse(response.hasResponse());
+        BytesReference source = response.getSource();
         assertThat(source, notNullValue());
         Map<String, Object> sourceAsMap = XContentHelper.convertToMap(source, false).v2();
         assertThat(sourceAsMap, notNullValue());
@@ -126,7 +129,7 @@ public class RenderSearchTemplateTests extends ESIntegTestCase {
         params.put("size", 100);
         response = prepareRenderSearchTemplate("index_template_1", ScriptType.STORED, params).get();
         assertThat(response, notNullValue());
-        source = response.source();
+        source = response.getSource();
         assertThat(source, notNullValue());
         sourceAsMap = XContentHelper.convertToMap(source, false).v2();
         expected = TEMPLATE_CONTENTS.replace("{{value}}", "baz").replace("{{size}}", "100");
@@ -138,9 +141,10 @@ public class RenderSearchTemplateTests extends ESIntegTestCase {
         Map<String, Object> params = new HashMap<>();
         params.put("value", "bar");
         params.put("size", 20);
-        RenderSearchTemplateResponse response = prepareRenderSearchTemplate("file_template_1", ScriptType.FILE, params).get();
+        SearchTemplateResponse response = prepareRenderSearchTemplate("file_template_1", ScriptType.FILE, params).get();
         assertThat(response, notNullValue());
-        BytesReference source = response.source();
+        assertFalse(response.hasResponse());
+        BytesReference source = response.getSource();
         assertThat(source, notNullValue());
         Map<String, Object> sourceAsMap = XContentHelper.convertToMap(source, false).v2();
         assertThat(sourceAsMap, notNullValue());
@@ -153,7 +157,7 @@ public class RenderSearchTemplateTests extends ESIntegTestCase {
         params.put("size", 100);
         response = prepareRenderSearchTemplate("file_template_1", ScriptType.FILE, params).get();
         assertThat(response, notNullValue());
-        source = response.source();
+        source = response.getSource();
         assertThat(source, notNullValue());
         sourceAsMap = XContentHelper.convertToMap(source, false).v2();
         expected = TEMPLATE_CONTENTS.replace("{{value}}", "baz").replace("{{size}}", "100");
@@ -161,7 +165,7 @@ public class RenderSearchTemplateTests extends ESIntegTestCase {
         assertThat(sourceAsMap, equalTo(expectedMap));
     }
 
-    private RenderSearchTemplateRequestBuilder prepareRenderSearchTemplate(String script, ScriptType type, Map<String, Object> params) {
-        return new RenderSearchTemplateRequestBuilder(client()).setScript(script).setScriptType(type).setScriptParams(params);
+    private SearchTemplateRequestBuilder prepareRenderSearchTemplate(String script, ScriptType type, Map<String, Object> params) {
+        return new SearchTemplateRequestBuilder(client()).setScript(script).setScriptType(type).setScriptParams(params).setSimulate(true);
     }
 }

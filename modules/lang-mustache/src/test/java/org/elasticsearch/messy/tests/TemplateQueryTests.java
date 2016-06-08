@@ -25,6 +25,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.template.SearchTemplateAction;
 import org.elasticsearch.action.search.template.SearchTemplateRequest;
 import org.elasticsearch.action.search.template.SearchTemplateRequestBuilder;
+import org.elasticsearch.action.search.template.SearchTemplateResponse;
 import org.elasticsearch.common.ParseFieldMatcher;
 import org.elasticsearch.common.ParsingException;
 import org.elasticsearch.common.bytes.BytesArray;
@@ -35,7 +36,6 @@ import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TemplateQueryBuilder;
 import org.elasticsearch.plugins.Plugin;
-import org.elasticsearch.rest.action.search.template.RestSearchTemplateAction;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.ScriptService.ScriptType;
 import org.elasticsearch.script.Template;
@@ -151,10 +151,10 @@ public class TemplateQueryTests extends ESIntegTestCase {
         searchRequest.indices("_all");
 
         String query = "{ \"inline\" : { \"query\": {\"match_{{template}}\": {} } }, \"params\" : { \"template\":\"all\" } }";
-        SearchTemplateRequest request = RestSearchTemplateAction.parseRequest(new BytesArray(query));
+        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(query));
         request.setRequest(searchRequest);
-        SearchResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
-        assertHitCount(searchResponse, 2);
+        SearchTemplateResponse response = client().execute(SearchTemplateAction.INSTANCE, request).get();
+        assertHitCount(response.getResponse(), 2);
     }
 
     private Template parseTemplate(String template) throws IOException {
@@ -177,14 +177,14 @@ public class TemplateQueryTests extends ESIntegTestCase {
                 .setScriptParams(randomBoolean() ? null : Collections.emptyMap())
                 .get());
 
-        SearchResponse searchResponse = new SearchTemplateRequestBuilder(client())
+        SearchTemplateResponse searchResponse = new SearchTemplateRequestBuilder(client())
                 .setRequest(searchRequest)
                 .setScript(query)
                 .setScriptType(ScriptType.INLINE)
                 .setScriptParams(Collections.singletonMap("my_size", 1))
                 .get();
 
-        assertThat(searchResponse.getHits().hits().length, equalTo(1));
+        assertThat(searchResponse.getResponse().getHits().hits().length, equalTo(1));
     }
 
     public void testThatParametersCanBeSet() throws Exception {
@@ -200,15 +200,15 @@ public class TemplateQueryTests extends ESIntegTestCase {
         templateParams.put("myField", "theField");
         templateParams.put("myValue", "foo");
 
-        SearchResponse searchResponse = new SearchTemplateRequestBuilder(client())
+        SearchTemplateResponse searchResponse = new SearchTemplateRequestBuilder(client())
                 .setRequest(new SearchRequest("test").types("type"))
                 .setScript("full-query-template")
                 .setScriptType(ScriptType.FILE)
                 .setScriptParams(templateParams)
                 .get();
-        assertHitCount(searchResponse, 4);
+        assertHitCount(searchResponse.getResponse(), 4);
         // size kicks in here...
-        assertThat(searchResponse.getHits().getHits().length, is(2));
+        assertThat(searchResponse.getResponse().getHits().getHits().length, is(2));
 
         templateParams.put("myField", "otherField");
         searchResponse = new SearchTemplateRequestBuilder(client())
@@ -217,7 +217,7 @@ public class TemplateQueryTests extends ESIntegTestCase {
                 .setScriptType(ScriptType.FILE)
                 .setScriptParams(templateParams)
                 .get();
-        assertHitCount(searchResponse, 1);
+        assertHitCount(searchResponse.getResponse(), 1);
     }
 
     public void testSearchTemplateQueryFromFile() throws Exception {
@@ -225,10 +225,10 @@ public class TemplateQueryTests extends ESIntegTestCase {
         searchRequest.indices("_all");
         String query = "{" + "  \"file\": \"full-query-template\"," + "  \"params\":{" + "    \"mySize\": 2,"
                 + "    \"myField\": \"text\"," + "    \"myValue\": \"value1\"" + "  }" + "}";
-        SearchTemplateRequest request = RestSearchTemplateAction.parseRequest(new BytesArray(query));
+        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(query));
         request.setRequest(searchRequest);
-        SearchResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
-        assertThat(searchResponse.getHits().hits().length, equalTo(1));
+        SearchTemplateResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
+        assertThat(searchResponse.getResponse().getHits().hits().length, equalTo(1));
     }
 
     /**
@@ -239,10 +239,10 @@ public class TemplateQueryTests extends ESIntegTestCase {
         searchRequest.indices("_all");
         String query = "{" + "  \"inline\" : \"{ \\\"size\\\": \\\"{{size}}\\\", \\\"query\\\":{\\\"match_all\\\":{}}}\","
                 + "  \"params\":{" + "    \"size\": 1" + "  }" + "}";
-        SearchTemplateRequest request = RestSearchTemplateAction.parseRequest(new BytesArray(query));
+        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(query));
         request.setRequest(searchRequest);
-        SearchResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
-        assertThat(searchResponse.getHits().hits().length, equalTo(1));
+        SearchTemplateResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
+        assertThat(searchResponse.getResponse().getHits().hits().length, equalTo(1));
     }
 
     /**
@@ -255,10 +255,10 @@ public class TemplateQueryTests extends ESIntegTestCase {
         String templateString = "{"
                 + "  \"inline\" : \"{ {{#use_size}} \\\"size\\\": \\\"{{size}}\\\", {{/use_size}} \\\"query\\\":{\\\"match_all\\\":{}}}\","
                 + "  \"params\":{" + "    \"size\": 1," + "    \"use_size\": true" + "  }" + "}";
-        SearchTemplateRequest request = RestSearchTemplateAction.parseRequest(new BytesArray(templateString));
+        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(templateString));
         request.setRequest(searchRequest);
-        SearchResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
-        assertThat(searchResponse.getHits().hits().length, equalTo(1));
+        SearchTemplateResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
+        assertThat(searchResponse.getResponse().getHits().hits().length, equalTo(1));
     }
 
     /**
@@ -271,10 +271,10 @@ public class TemplateQueryTests extends ESIntegTestCase {
         String templateString = "{"
                 + "  \"inline\" : \"{ \\\"query\\\":{\\\"match_all\\\":{}} {{#use_size}}, \\\"size\\\": \\\"{{size}}\\\" {{/use_size}} }\","
                 + "  \"params\":{" + "    \"size\": 1," + "    \"use_size\": true" + "  }" + "}";
-        SearchTemplateRequest request = RestSearchTemplateAction.parseRequest(new BytesArray(templateString));
+        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(templateString));
         request.setRequest(searchRequest);
-        SearchResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
-        assertThat(searchResponse.getHits().hits().length, equalTo(1));
+        SearchTemplateResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
+        assertThat(searchResponse.getResponse().getHits().hits().length, equalTo(1));
     }
 
     public void testIndexedTemplateClient() throws Exception {
@@ -319,11 +319,11 @@ public class TemplateQueryTests extends ESIntegTestCase {
         Map<String, Object> templateParams = new HashMap<>();
         templateParams.put("fieldParam", "foo");
 
-        SearchResponse searchResponse = new SearchTemplateRequestBuilder(client())
+        SearchTemplateResponse searchResponse = new SearchTemplateRequestBuilder(client())
                 .setRequest(new SearchRequest("test").types("type"))
                 .setScript("testTemplate").setScriptType(ScriptType.STORED).setScriptParams(templateParams)
                 .get();
-        assertHitCount(searchResponse, 4);
+        assertHitCount(searchResponse.getResponse(), 4);
 
         assertAcked(client().admin().cluster()
                 .prepareDeleteStoredScript(MustacheScriptEngineService.NAME, "testTemplate"));
@@ -387,13 +387,13 @@ public class TemplateQueryTests extends ESIntegTestCase {
         Map<String, Object> templateParams = new HashMap<>();
         templateParams.put("fieldParam", "foo");
 
-        SearchResponse searchResponse = new SearchTemplateRequestBuilder(client())
+        SearchTemplateResponse searchResponse = new SearchTemplateRequestBuilder(client())
                 .setRequest(new SearchRequest().indices("test").types("type"))
                 .setScript("/mustache/1a")
                 .setScriptType(ScriptType.STORED)
                 .setScriptParams(templateParams)
                 .get();
-        assertHitCount(searchResponse, 4);
+        assertHitCount(searchResponse.getResponse(), 4);
 
         expectThrows(IllegalArgumentException.class, () -> new SearchTemplateRequestBuilder(client())
                 .setRequest(new SearchRequest().indices("test").types("type"))
@@ -414,7 +414,7 @@ public class TemplateQueryTests extends ESIntegTestCase {
                 .setRequest(new SearchRequest("test").types("type"))
                 .setScript("/mustache/2").setScriptType(ScriptService.ScriptType.STORED).setScriptParams(templateParams)
                 .get();
-        assertHitCount(searchResponse, 1);
+        assertHitCount(searchResponse.getResponse(), 1);
 
         Map<String, Object> vars = new HashMap<>();
         vars.put("fieldParam", "bar");
@@ -472,11 +472,11 @@ public class TemplateQueryTests extends ESIntegTestCase {
                     .setSource(new BytesArray("{\"query\": {\"match\": {\"searchtext\": {\"query\": \"{{P_Keyword1}}\"," +
                             "\"type\": \"phrase_prefix\"}}}}")));
 
-            SearchResponse searchResponse = new SearchTemplateRequestBuilder(client())
+            SearchTemplateResponse searchResponse = new SearchTemplateRequestBuilder(client())
                     .setRequest(new SearchRequest("testindex").types("test"))
                     .setScript("git01").setScriptType(ScriptService.ScriptType.STORED).setScriptParams(templateParams)
                     .get();
-            assertHitCount(searchResponse, 1);
+            assertHitCount(searchResponse.getResponse(), 1);
         }
     }
 
@@ -502,11 +502,11 @@ public class TemplateQueryTests extends ESIntegTestCase {
       String[] fieldParams = {"foo","bar"};
       arrayTemplateParams.put("fieldParam", fieldParams);
 
-        SearchResponse searchResponse = new SearchTemplateRequestBuilder(client())
+        SearchTemplateResponse searchResponse = new SearchTemplateRequestBuilder(client())
                 .setRequest(new SearchRequest("test").types("type"))
                 .setScript("/mustache/4").setScriptType(ScriptService.ScriptType.STORED).setScriptParams(arrayTemplateParams)
                 .get();
-        assertHitCount(searchResponse, 5);
+        assertHitCount(searchResponse.getResponse(), 5);
     }
 
 }

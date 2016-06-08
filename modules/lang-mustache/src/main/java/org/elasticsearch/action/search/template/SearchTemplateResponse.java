@@ -20,6 +20,7 @@
 package org.elasticsearch.action.search.template;
 
 import org.elasticsearch.action.ActionResponse;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -28,44 +29,58 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import java.io.IOException;
 
-public class RenderSearchTemplateResponse extends ActionResponse implements ToXContent {
+public class SearchTemplateResponse  extends ActionResponse implements ToXContent {
 
+    /** Contains the source of the rendered template **/
     private BytesReference source;
 
-    public RenderSearchTemplateResponse() {
+    /** Contains the search response, if any **/
+    private SearchResponse response;
+
+    SearchTemplateResponse() {
     }
 
-    public RenderSearchTemplateResponse(BytesReference source) {
+    public BytesReference getSource() {
+        return source;
+    }
+
+    public void setSource(BytesReference source) {
         this.source = source;
     }
 
-    public BytesReference source() {
-        return source;
+    public SearchResponse getResponse() {
+        return response;
+    }
+
+    public void setResponse(SearchResponse searchResponse) {
+        this.response = searchResponse;
+    }
+
+    public boolean hasResponse() {
+        return response != null;
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
-        boolean hasSource = source != null;
-        out.writeBoolean(hasSource);
-        if (hasSource) {
-            out.writeBytesReference(source);
-        }
+        out.writeOptionalBytesReference(source);
+        out.writeOptionalStreamable(response);
     }
-    
+
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        if (in.readBoolean()) {
-            source = in.readBytesReference();
-        }
+        source = in.readOptionalBytesReference();
+        response = in.readOptionalStreamable(SearchResponse::new);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        builder.startObject();
-        builder.rawField("template_output", source);
-        builder.endObject();
+        if (hasResponse()) {
+            response.toXContent(builder, params);
+        } else {
+            builder.rawField("template_output", source);
+        }
         return builder;
     }
 }

@@ -21,7 +21,6 @@ package org.elasticsearch.action.search.template;
 
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.MultiSearchResponse;
-import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
@@ -53,10 +52,10 @@ public class TransportMultiSearchTemplateAction extends HandledTransportAction<M
 
         for (int i = 0; i < responses.length(); i++) {
             final int index = i;
-            searchTemplateAction.execute(request.requests().get(i), new ActionListener<SearchResponse>() {
+            searchTemplateAction.execute(request.requests().get(i), new ActionListener<SearchTemplateResponse>() {
                 @Override
-                public void onResponse(SearchResponse searchResponse) {
-                    responses.set(index, new MultiSearchResponse.Item(searchResponse, null));
+                public void onResponse(SearchTemplateResponse searchTemplateResponse) {
+                    responses.set(index, new MultiSearchResponse.Item(searchTemplateResponse.getResponse(), null));
                     if (counter.decrementAndGet() == 0) {
                         finishHim();
                     }

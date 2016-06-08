@@ -21,10 +21,8 @@ package org.elasticsearch.script.mustache;
 
 import org.elasticsearch.action.ActionModule;
 import org.elasticsearch.action.search.template.MultiSearchTemplateAction;
-import org.elasticsearch.action.search.template.RenderSearchTemplateAction;
 import org.elasticsearch.action.search.template.SearchTemplateAction;
 import org.elasticsearch.action.search.template.TransportMultiSearchTemplateAction;
-import org.elasticsearch.action.search.template.TransportRenderSearchTemplateAction;
 import org.elasticsearch.action.search.template.TransportSearchTemplateAction;
 import org.elasticsearch.common.network.NetworkModule;
 import org.elasticsearch.plugins.Plugin;
@@ -59,7 +57,6 @@ public class MustachePlugin extends Plugin {
     public void onModule(ActionModule module) {
         module.registerAction(SearchTemplateAction.INSTANCE, TransportSearchTemplateAction.class);
         module.registerAction(MultiSearchTemplateAction.INSTANCE, TransportMultiSearchTemplateAction.class);
-        module.registerAction(RenderSearchTemplateAction.INSTANCE, TransportRenderSearchTemplateAction.class);
     }
 
     public void onModule(NetworkModule module) {

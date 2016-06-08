@@ -23,7 +23,7 @@ import org.elasticsearch.action.Action;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.ElasticsearchClient;
 
-public class SearchTemplateAction extends Action<SearchTemplateRequest, SearchResponse, SearchTemplateRequestBuilder> {
+public class SearchTemplateAction extends Action<SearchTemplateRequest, SearchTemplateResponse, SearchTemplateRequestBuilder> {
 
     public static final SearchTemplateAction INSTANCE = new SearchTemplateAction();
     public static final String NAME = "indices:data/read/search/template";
@@ -38,7 +38,7 @@ public class SearchTemplateAction extends Action<SearchTemplateRequest, SearchRe
     }
 
     @Override
-    public SearchResponse newResponse() {
-        return new SearchResponse();
+    public SearchTemplateResponse newResponse() {
+        return new SearchTemplateResponse();
     }
 }

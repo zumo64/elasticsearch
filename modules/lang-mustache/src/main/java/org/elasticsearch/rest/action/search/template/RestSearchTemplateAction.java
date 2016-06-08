@@ -24,7 +24,6 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.template.SearchTemplateAction;
 import org.elasticsearch.action.search.template.SearchTemplateRequest;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.indices.query.IndicesQueriesRegistry;
@@ -38,9 +37,6 @@ import org.elasticsearch.rest.action.support.RestToXContentListener;
 import org.elasticsearch.search.aggregations.AggregatorParsers;
 import org.elasticsearch.search.suggest.Suggesters;
 
-import java.io.IOException;
-
-import static org.elasticsearch.action.search.template.RenderSearchTemplateRequest.fromXContent;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
@@ -77,13 +73,9 @@ public class RestSearchTemplateAction extends BaseRestHandler {
         RestSearchAction.parseSearchRequest(searchRequest, queryRegistry, request, parseFieldMatcher, aggParsers, suggesters, null);
 
         // Creates the search template request
-        SearchTemplateRequest searchTemplateRequest = parseRequest(RestActions.getRestContent(request));
+        SearchTemplateRequest searchTemplateRequest = SearchTemplateRequest.parse(RestActions.getRestContent(request));
         searchTemplateRequest.setRequest(searchRequest);
 
         client.execute(SearchTemplateAction.INSTANCE, searchTemplateRequest, new RestToXContentListener<>(channel));
-    }
-
-    public static SearchTemplateRequest parseRequest(BytesReference bytes) throws IOException {
-        return fromXContent(bytes, new SearchTemplateRequest());
     }
 }

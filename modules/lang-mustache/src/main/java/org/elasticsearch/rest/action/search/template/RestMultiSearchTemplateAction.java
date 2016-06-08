@@ -47,7 +47,6 @@ import org.elasticsearch.search.suggest.Suggesters;
 
 import java.util.Map;
 
-import static org.elasticsearch.action.search.template.RenderSearchTemplateRequest.fromXContent;
 import static org.elasticsearch.common.xcontent.support.XContentMapValues.lenientNodeBooleanValue;
 import static org.elasticsearch.common.xcontent.support.XContentMapValues.nodeStringArrayValue;
 import static org.elasticsearch.common.xcontent.support.XContentMapValues.nodeStringValue;
@@ -181,7 +180,7 @@ public class RestMultiSearchTemplateAction extends BaseRestHandler {
             }
 
             BytesReference slice = data.slice(from, nextMarker - from);
-            SearchTemplateRequest searchTemplateRequest = fromXContent(slice, new SearchTemplateRequest());
+            SearchTemplateRequest searchTemplateRequest = SearchTemplateRequest.parse(slice);
             if (searchTemplateRequest.getScript() != null) {
                 searchTemplateRequest.setRequest(searchRequest);
                 multiSearchRequest.add(searchTemplateRequest);

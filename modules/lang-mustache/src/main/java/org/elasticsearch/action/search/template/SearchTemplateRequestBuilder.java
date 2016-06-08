@@ -19,12 +19,15 @@
 
 package org.elasticsearch.action.search.template;
 
+import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.ElasticsearchClient;
+import org.elasticsearch.script.ScriptService;
+
+import java.util.Map;
 
 public class SearchTemplateRequestBuilder
-        extends AbstractSearchTemplateRequestBuilder<SearchTemplateRequest, SearchResponse, SearchTemplateRequestBuilder> {
+        extends ActionRequestBuilder<SearchTemplateRequest, SearchTemplateResponse, SearchTemplateRequestBuilder> {
 
     SearchTemplateRequestBuilder(ElasticsearchClient client, SearchTemplateAction action) {
         super(client, action, new SearchTemplateRequest());
@@ -34,8 +37,28 @@ public class SearchTemplateRequestBuilder
         this(client, SearchTemplateAction.INSTANCE);
     }
 
-    public SearchTemplateRequestBuilder setRequest(SearchRequest request) {
-        this.request.setRequest(request);
+    public SearchTemplateRequestBuilder setRequest(SearchRequest searchRequest) {
+        request.setRequest(searchRequest);
+        return this;
+    }
+
+    public SearchTemplateRequestBuilder setSimulate(boolean simulate) {
+        request.setSimulate(simulate);
+        return this;
+    }
+
+    public SearchTemplateRequestBuilder setScriptType(ScriptService.ScriptType scriptType) {
+        request.setScriptType(scriptType);
+        return this;
+    }
+
+    public SearchTemplateRequestBuilder setScript(String script) {
+        request.setScript(script);
+        return this;
+    }
+
+    public SearchTemplateRequestBuilder setScriptParams(Map<String, Object> scriptParams) {
+        request.setScriptParams(scriptParams);
         return this;
     }
 }
