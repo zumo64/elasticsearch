@@ -26,10 +26,7 @@ import org.elasticsearch.action.search.template.SearchTemplateAction;
 import org.elasticsearch.action.search.template.TransportMultiSearchTemplateAction;
 import org.elasticsearch.action.search.template.TransportRenderSearchTemplateAction;
 import org.elasticsearch.action.search.template.TransportSearchTemplateAction;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.network.NetworkModule;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.action.search.template.RestDeleteSearchTemplateAction;
 import org.elasticsearch.rest.action.search.template.RestGetSearchTemplateAction;
@@ -43,12 +40,6 @@ import org.elasticsearch.script.ScriptModule;
 public class MustachePlugin extends Plugin {
 
     public static final String NAME = "lang-mustache";
-
-    private final boolean transportClientMode;
-
-    public MustachePlugin(Settings settings) {
-        this.transportClientMode = transportClientMode(settings);
-    }
 
     @Override
     public String name() {
@@ -72,7 +63,7 @@ public class MustachePlugin extends Plugin {
     }
 
     public void onModule(NetworkModule module) {
-        if (transportClientMode == false) {
+        if (module.isTransportClient() == false) {
             module.registerRestHandler(RestSearchTemplateAction.class);
             module.registerRestHandler(RestMultiSearchTemplateAction.class);
             module.registerRestHandler(RestGetSearchTemplateAction.class);
@@ -80,9 +71,5 @@ public class MustachePlugin extends Plugin {
             module.registerRestHandler(RestDeleteSearchTemplateAction.class);
             module.registerRestHandler(RestRenderSearchTemplateAction.class);
         }
-    }
-
-    static boolean transportClientMode(Settings settings) {
-        return TransportClient.CLIENT_TYPE.equals(settings.get(Client.CLIENT_TYPE_SETTING_S.getKey()));
     }
 }

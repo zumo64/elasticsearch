@@ -255,7 +255,7 @@ public class NetworkModule extends AbstractModule {
 
         RestRecoveryAction.class,
 
-            // Scripts API
+        // Scripts API
         RestGetStoredScriptAction.class,
         RestPutStoredScriptAction.class,
         RestDeleteStoredScriptAction.class,
@@ -341,6 +341,10 @@ public class NetworkModule extends AbstractModule {
                 restHandlers.registerExtension(restAction);
             }
         }
+    }
+
+    public boolean isTransportClient() {
+        return transportClient;
     }
 
     /** Adds a transport service implementation that can be selected by setting {@link #TRANSPORT_SERVICE_TYPE_KEY}. */
