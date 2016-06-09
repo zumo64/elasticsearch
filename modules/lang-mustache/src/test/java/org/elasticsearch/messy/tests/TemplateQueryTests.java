@@ -36,6 +36,7 @@ import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TemplateQueryBuilder;
 import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.rest.action.search.template.RestSearchTemplateAction;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.ScriptService.ScriptType;
 import org.elasticsearch.script.Template;
@@ -151,7 +152,7 @@ public class TemplateQueryTests extends ESIntegTestCase {
         searchRequest.indices("_all");
 
         String query = "{ \"inline\" : { \"query\": {\"match_{{template}}\": {} } }, \"params\" : { \"template\":\"all\" } }";
-        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(query));
+        SearchTemplateRequest request =  RestSearchTemplateAction.parse(new BytesArray(query));
         request.setRequest(searchRequest);
         SearchTemplateResponse response = client().execute(SearchTemplateAction.INSTANCE, request).get();
         assertHitCount(response.getResponse(), 2);
@@ -225,7 +226,7 @@ public class TemplateQueryTests extends ESIntegTestCase {
         searchRequest.indices("_all");
         String query = "{" + "  \"file\": \"full-query-template\"," + "  \"params\":{" + "    \"mySize\": 2,"
                 + "    \"myField\": \"text\"," + "    \"myValue\": \"value1\"" + "  }" + "}";
-        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(query));
+        SearchTemplateRequest request =  RestSearchTemplateAction.parse(new BytesArray(query));
         request.setRequest(searchRequest);
         SearchTemplateResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
         assertThat(searchResponse.getResponse().getHits().hits().length, equalTo(1));
@@ -239,7 +240,7 @@ public class TemplateQueryTests extends ESIntegTestCase {
         searchRequest.indices("_all");
         String query = "{" + "  \"inline\" : \"{ \\\"size\\\": \\\"{{size}}\\\", \\\"query\\\":{\\\"match_all\\\":{}}}\","
                 + "  \"params\":{" + "    \"size\": 1" + "  }" + "}";
-        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(query));
+        SearchTemplateRequest request =  RestSearchTemplateAction.parse(new BytesArray(query));
         request.setRequest(searchRequest);
         SearchTemplateResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
         assertThat(searchResponse.getResponse().getHits().hits().length, equalTo(1));
@@ -255,7 +256,7 @@ public class TemplateQueryTests extends ESIntegTestCase {
         String templateString = "{"
                 + "  \"inline\" : \"{ {{#use_size}} \\\"size\\\": \\\"{{size}}\\\", {{/use_size}} \\\"query\\\":{\\\"match_all\\\":{}}}\","
                 + "  \"params\":{" + "    \"size\": 1," + "    \"use_size\": true" + "  }" + "}";
-        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(templateString));
+        SearchTemplateRequest request =  RestSearchTemplateAction.parse(new BytesArray(templateString));
         request.setRequest(searchRequest);
         SearchTemplateResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
         assertThat(searchResponse.getResponse().getHits().hits().length, equalTo(1));
@@ -271,7 +272,7 @@ public class TemplateQueryTests extends ESIntegTestCase {
         String templateString = "{"
                 + "  \"inline\" : \"{ \\\"query\\\":{\\\"match_all\\\":{}} {{#use_size}}, \\\"size\\\": \\\"{{size}}\\\" {{/use_size}} }\","
                 + "  \"params\":{" + "    \"size\": 1," + "    \"use_size\": true" + "  }" + "}";
-        SearchTemplateRequest request = SearchTemplateRequest.parse(new BytesArray(templateString));
+        SearchTemplateRequest request =  RestSearchTemplateAction.parse(new BytesArray(templateString));
         request.setRequest(searchRequest);
         SearchTemplateResponse searchResponse = client().execute(SearchTemplateAction.INSTANCE, request).get();
         assertThat(searchResponse.getResponse().getHits().hits().length, equalTo(1));

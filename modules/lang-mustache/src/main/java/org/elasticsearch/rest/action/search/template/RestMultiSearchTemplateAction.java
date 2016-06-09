@@ -180,7 +180,7 @@ public class RestMultiSearchTemplateAction extends BaseRestHandler {
             }
 
             BytesReference slice = data.slice(from, nextMarker - from);
-            SearchTemplateRequest searchTemplateRequest = SearchTemplateRequest.parse(slice);
+            SearchTemplateRequest searchTemplateRequest = RestSearchTemplateAction.parse(slice);
             if (searchTemplateRequest.getScript() != null) {
                 searchTemplateRequest.setRequest(searchRequest);
                 multiSearchRequest.add(searchTemplateRequest);

@@ -49,7 +49,7 @@ public class RestRenderSearchTemplateAction extends BaseRestHandler {
     @Override
     protected void handleRequest(RestRequest request, RestChannel channel, Client client) throws Exception {
         // Creates the render template request
-        SearchTemplateRequest renderRequest = SearchTemplateRequest.parse(RestActions.getRestContent(request));
+        SearchTemplateRequest renderRequest = RestSearchTemplateAction.parse(RestActions.getRestContent(request));
         renderRequest.setSimulate(true);
 
         String id = request.param("id");
