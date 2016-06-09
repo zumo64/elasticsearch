@@ -64,7 +64,7 @@ public class MultiSearchTemplateRequest extends ActionRequest<MultiSearchTemplat
 
     @Override
     public List<? extends IndicesRequest> subRequests() {
-        return requests.stream().map(SearchTemplateRequest::getRequest).collect(Collectors.toList());
+        return requests;
     }
 
     @Override
