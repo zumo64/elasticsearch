@@ -24,12 +24,13 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-import org.elasticsearch.common.xcontent.ToXContent;
+import org.elasticsearch.common.xcontent.StatusToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.rest.RestStatus;
 
 import java.io.IOException;
 
-public class SearchTemplateResponse  extends ActionResponse implements ToXContent {
+public class SearchTemplateResponse  extends ActionResponse implements StatusToXContent {
 
     /** Contains the source of the rendered template **/
     private BytesReference source;
@@ -82,5 +83,14 @@ public class SearchTemplateResponse  extends ActionResponse implements ToXConten
             builder.rawField("template_output", source);
         }
         return builder;
+    }
+
+    @Override
+    public RestStatus status() {
+        if (hasResponse()) {
+            return response.status();
+        } else {
+            return RestStatus.OK;
+        }
     }
 }

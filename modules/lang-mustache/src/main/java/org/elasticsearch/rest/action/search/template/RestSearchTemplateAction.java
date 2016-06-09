@@ -43,7 +43,7 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.search.RestSearchAction;
 import org.elasticsearch.rest.action.support.RestActions;
-import org.elasticsearch.rest.action.support.RestToXContentListener;
+import org.elasticsearch.rest.action.support.RestStatusToXContentListener;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.search.aggregations.AggregatorParsers;
 import org.elasticsearch.search.suggest.Suggesters;
@@ -117,7 +117,7 @@ public class RestSearchTemplateAction extends BaseRestHandler {
         SearchTemplateRequest searchTemplateRequest = parse(RestActions.getRestContent(request));
         searchTemplateRequest.setRequest(searchRequest);
 
-        client.execute(SearchTemplateAction.INSTANCE, searchTemplateRequest, new RestToXContentListener<>(channel));
+        client.execute(SearchTemplateAction.INSTANCE, searchTemplateRequest, new RestStatusToXContentListener<>(channel));
     }
 
     public static SearchTemplateRequest parse(BytesReference bytes) throws IOException {

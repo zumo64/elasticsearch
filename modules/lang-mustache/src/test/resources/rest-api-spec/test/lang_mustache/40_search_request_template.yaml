@@ -27,3 +27,12 @@
         body: { "inline" : { "query": { "match_{{template}}": {} } }, "params" : { "template" : "all" } }
 
   - match: { hits.total: 2 }
+
+---
+"Missing template search request":
+
+  - do:
+      catch: missing
+      search_template:
+        body: { "id" : "unknown", "params": { "template": "value1" } }
+
