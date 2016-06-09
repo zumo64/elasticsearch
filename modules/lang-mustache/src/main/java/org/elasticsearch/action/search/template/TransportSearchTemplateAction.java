@@ -25,7 +25,6 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.TransportSearchAction;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
-import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -37,7 +36,6 @@ import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.indices.query.IndicesQueriesRegistry;
 import org.elasticsearch.script.ExecutableScript;
 import org.elasticsearch.script.Script;
-import org.elasticsearch.script.ScriptContext;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.mustache.MustacheScriptEngineService;
 import org.elasticsearch.search.aggregations.AggregatorParsers;
@@ -47,7 +45,6 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 import java.io.IOException;
-import java.util.Objects;
 
 import static java.util.Collections.emptyMap;
 import static org.elasticsearch.script.ScriptContext.Standard.SEARCH;
@@ -78,82 +75,48 @@ public class TransportSearchTemplateAction extends HandledTransportAction<Search
         this.suggesters = suggesters;
     }
 
-
     @Override
     protected void doExecute(SearchTemplateRequest request, ActionListener<SearchTemplateResponse> listener) {
-        new AsyncSearchTemplateAction(request, listener, SEARCH, clusterService.state()).start();
-    }
+        final SearchTemplateResponse response = new SearchTemplateResponse();
+        try {
+            Script script = new Script(request.getScript(), request.getScriptType(), TEMPLATE_LANG, request.getScriptParams());
+            ExecutableScript executable = scriptService.executable(script, SEARCH, emptyMap(), clusterService.state());
 
-    class AsyncSearchTemplateAction {
+            BytesReference source = (BytesReference) executable.run();
+            response.setSource(source);
 
-        private final SearchTemplateRequest request;
-        private final SearchTemplateResponse response;
-        private final ActionListener<SearchTemplateResponse> listener;
-        private final ScriptContext scriptContext;
-        private final ClusterState clusterState;
+            if (request.isSimulate() == false) {
+                SearchRequest searchRequest = request.getRequest();
 
-        public AsyncSearchTemplateAction(SearchTemplateRequest request, ActionListener<SearchTemplateResponse> listener,
-                                         ScriptContext scriptContext, ClusterState clusterState) {
-            this.request = Objects.requireNonNull(request);
-            this.listener = Objects.requireNonNull(listener);
-            this.scriptContext = Objects.requireNonNull(scriptContext);
-            this.clusterState = Objects.requireNonNull(clusterState);
-            this.response = new SearchTemplateResponse();
-        }
+                try (XContentParser parser = XContentFactory.xContent(source).createParser(source)) {
+                    SearchSourceBuilder builder = SearchSourceBuilder.searchSource();
+                    builder.parseXContent(new QueryParseContext(queryRegistry, parser, parseFieldMatcher), aggsParsers, suggesters);
+                    searchRequest.source(builder);
 
-        void start() {
-            try {
-                Script script = new Script(request.getScript(), request.getScriptType(), TEMPLATE_LANG, request.getScriptParams());
-                ExecutableScript executable = scriptService.executable(script, scriptContext, emptyMap(), clusterState);
-
-                BytesReference source = (BytesReference) executable.run();
-                response.setSource(source);
-
-                if (request.isSimulate() == false) {
-                    SearchRequest searchRequest = request.getRequest();
-
-                    try (XContentParser parser = XContentFactory.xContent(source).createParser(source)) {
-                        SearchSourceBuilder builder = SearchSourceBuilder.searchSource();
-                        builder.parseXContent(new QueryParseContext(queryRegistry, parser, parseFieldMatcher), aggsParsers, suggesters);
-                        searchRequest.source(builder);
-
-                        searchAction.execute(searchRequest, new ActionListener<SearchResponse>() {
-                            @Override
-                            public void onResponse(SearchResponse searchResponse) {
-                                onSearchResponse(searchResponse);
+                    searchAction.execute(searchRequest, new ActionListener<SearchResponse>() {
+                        @Override
+                        public void onResponse(SearchResponse searchResponse) {
+                            try {
+                                response.setResponse(searchResponse);
+                                listener.onResponse(response);
+                            } catch (Throwable t) {
+                                listener.onFailure(t);
                             }
+                        }
 
-                            @Override
-                            public void onFailure(Throwable e) {
-                                onSearchFailure(e);
-                            }
-                        });
-                    } catch (IOException e) {
-                        listener.onFailure(e);
-                    }
-                } else {
-                    finishHim();
+                        @Override
+                        public void onFailure(Throwable t) {
+                            listener.onFailure(t);
+                        }
+                    });
+                } catch (IOException e) {
+                    listener.onFailure(e);
                 }
-            } catch (Throwable t) {
-                listener.onFailure(t);
-            }
-        }
-
-        private void onSearchResponse(SearchResponse searchResponse) {
-            response.setResponse(searchResponse);
-            finishHim();
-        }
-
-        private void onSearchFailure(Throwable e) {
-            listener.onFailure(e);
-        }
-
-        void finishHim() {
-            try {
+            } else {
                 listener.onResponse(response);
-            } catch (Throwable e) {
-                listener.onFailure(e);
             }
+        } catch (Throwable t) {
+            listener.onFailure(t);
         }
     }
 }
