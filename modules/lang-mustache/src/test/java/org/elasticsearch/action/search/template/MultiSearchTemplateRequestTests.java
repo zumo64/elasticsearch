@@ -19,17 +19,15 @@
 
 package org.elasticsearch.action.search.template;
 
-import org.elasticsearch.action.support.IndicesOptions;
-import org.elasticsearch.common.ParseFieldMatcher;
 import org.elasticsearch.common.bytes.BytesArray;
-import org.elasticsearch.index.query.MatchAllQueryBuilder;
-import org.elasticsearch.index.query.QueryParser;
-import org.elasticsearch.indices.query.IndicesQueriesRegistry;
+import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.search.template.RestMultiSearchTemplateAction;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.StreamsUtils;
+import org.elasticsearch.test.rest.FakeRestRequest;
 
+import static java.util.Collections.emptyMap;
 import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
@@ -37,14 +35,10 @@ import static org.hamcrest.Matchers.nullValue;
 public class MultiSearchTemplateRequestTests extends ESTestCase {
 
     public void testParseRequest() throws Exception {
-        IndicesQueriesRegistry registry = new IndicesQueriesRegistry();
-        QueryParser<MatchAllQueryBuilder> parser = MatchAllQueryBuilder::fromXContent;
-        registry.register(parser, MatchAllQueryBuilder.QUERY_NAME_FIELD);
-
         byte[] data = StreamsUtils.copyToBytesFromClasspath("/org/elasticsearch/action/search/template/simple-msearch-template.json");
-        MultiSearchTemplateRequest request = RestMultiSearchTemplateAction.parseRequest(new MultiSearchTemplateRequest(),
-                new BytesArray(data), null, null, null, null, IndicesOptions.strictExpandOpenAndForbidClosed(), true, registry,
-                ParseFieldMatcher.EMPTY, null, null);
+        RestRequest restRequest = new FakeRestRequest(emptyMap(), emptyMap(), new BytesArray(data));
+
+        MultiSearchTemplateRequest request = RestMultiSearchTemplateAction.parseRequest(restRequest, true);
 
         assertThat(request.requests().size(), equalTo(3));
         assertThat(request.requests().get(0).getRequest().indices()[0], equalTo("test0"));
