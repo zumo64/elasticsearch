@@ -21,8 +21,6 @@ package org.elasticsearch.rest.action.search.template;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.rest.BaseRestHandler;
-import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.action.admin.cluster.storedscripts.RestPutStoredScriptAction;
@@ -38,28 +36,10 @@ public class RestPutSearchTemplateAction extends RestPutStoredScriptAction {
         super(settings, controller, false, client);
         controller.registerHandler(POST, "/_search/template/{id}", this);
         controller.registerHandler(PUT, "/_search/template/{id}", this);
-        controller.registerHandler(PUT, "/_search/template/{id}/_create", new CreateHandler(settings, client, this));
-        controller.registerHandler(POST, "/_search/template/{id}/_create", new CreateHandler(settings, client, this));
     }
 
     @Override
     protected String getScriptLang(RestRequest request) {
         return Template.DEFAULT_LANG;
-    }
-
-    final class CreateHandler extends BaseRestHandler {
-
-        private final RestPutSearchTemplateAction action;
-
-        protected CreateHandler(Settings settings, Client client, RestPutSearchTemplateAction action) {
-            super(settings, client);
-            this.action = action;
-        }
-
-        @Override
-        public void handleRequest(RestRequest request, RestChannel channel, final Client client) {
-            request.params().put("op_type", "create");
-            action.handleRequest(request, channel, client);
-        }
     }
 }
