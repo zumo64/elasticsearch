@@ -265,12 +265,13 @@ The `setTemplateSource(String)` and `setTemplateSource(BytesReference)` methods 
 
 ==== SearchRequest
 
-All `template` methods have been removed in favor of a single `template(Template)` method.
-
 All `source` methods have been removed in favor of a single `source(SearchSourceBuilder)` method. This means that all search requests can now be validated
 at call time which results in much clearer errors.
 
 All `extraSource` methods have been removed.
+
+All `template` methods have been removed in favor of a new Search Template API. A new `SearchTemplateRequest` now accepts a template and
+a `SearchRequest` and must be executed using the new `SearchTemplateAction` action.
 
 ==== SearchResponse
 
