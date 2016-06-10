@@ -20,7 +20,6 @@
 package org.elasticsearch.action.search.template;
 
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
@@ -32,7 +31,7 @@ import org.elasticsearch.transport.TransportService;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class TransportMultiSearchTemplateAction extends HandledTransportAction<MultiSearchTemplateRequest, MultiSearchResponse> {
+public class TransportMultiSearchTemplateAction extends HandledTransportAction<MultiSearchTemplateRequest, MultiSearchTemplateResponse> {
 
     private final TransportSearchTemplateAction searchTemplateAction;
 
@@ -46,8 +45,8 @@ public class TransportMultiSearchTemplateAction extends HandledTransportAction<M
     }
 
     @Override
-    protected void doExecute(MultiSearchTemplateRequest request, ActionListener<MultiSearchResponse> listener) {
-        final AtomicArray<MultiSearchResponse.Item> responses = new AtomicArray<>(request.requests().size());
+    protected void doExecute(MultiSearchTemplateRequest request, ActionListener<MultiSearchTemplateResponse> listener) {
+        final AtomicArray<MultiSearchTemplateResponse.Item> responses = new AtomicArray<>(request.requests().size());
         final AtomicInteger counter = new AtomicInteger(responses.length());
 
         for (int i = 0; i < responses.length(); i++) {
@@ -55,7 +54,7 @@ public class TransportMultiSearchTemplateAction extends HandledTransportAction<M
             searchTemplateAction.execute(request.requests().get(i), new ActionListener<SearchTemplateResponse>() {
                 @Override
                 public void onResponse(SearchTemplateResponse searchTemplateResponse) {
-                    responses.set(index, new MultiSearchResponse.Item(searchTemplateResponse.getResponse(), null));
+                    responses.set(index, new MultiSearchTemplateResponse.Item(searchTemplateResponse, null));
                     if (counter.decrementAndGet() == 0) {
                         finishHim();
                     }
@@ -63,14 +62,15 @@ public class TransportMultiSearchTemplateAction extends HandledTransportAction<M
 
                 @Override
                 public void onFailure(Throwable e) {
-                    responses.set(index, new MultiSearchResponse.Item(null, e));
+                    responses.set(index, new MultiSearchTemplateResponse.Item(null, e));
                     if (counter.decrementAndGet() == 0) {
                         finishHim();
                     }
                 }
 
                 private void finishHim() {
-                    listener.onResponse(new MultiSearchResponse(responses.toArray(new MultiSearchResponse.Item[responses.length()])));
+                    MultiSearchTemplateResponse.Item[] items = responses.toArray(new MultiSearchTemplateResponse.Item[responses.length()]);
+                    listener.onResponse(new MultiSearchTemplateResponse(items));
                 }
             });
         }

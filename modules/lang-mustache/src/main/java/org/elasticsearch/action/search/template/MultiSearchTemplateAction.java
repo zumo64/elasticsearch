@@ -20,10 +20,10 @@
 package org.elasticsearch.action.search.template;
 
 import org.elasticsearch.action.Action;
-import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.client.ElasticsearchClient;
 
-public class MultiSearchTemplateAction extends Action<MultiSearchTemplateRequest, MultiSearchResponse, MultiSearchTemplateRequestBuilder> {
+public class MultiSearchTemplateAction
+        extends Action<MultiSearchTemplateRequest, MultiSearchTemplateResponse, MultiSearchTemplateRequestBuilder> {
 
     public static final MultiSearchTemplateAction INSTANCE = new MultiSearchTemplateAction();
     public static final String NAME = "indices:data/read/msearch/template";
@@ -33,8 +33,8 @@ public class MultiSearchTemplateAction extends Action<MultiSearchTemplateRequest
     }
 
     @Override
-    public MultiSearchResponse newResponse() {
-        return new MultiSearchResponse(new MultiSearchResponse.Item[0]);
+    public MultiSearchTemplateResponse newResponse() {
+        return new MultiSearchTemplateResponse();
     }
 
     @Override

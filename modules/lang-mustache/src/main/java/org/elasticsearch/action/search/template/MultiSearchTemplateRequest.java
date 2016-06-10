@@ -96,7 +96,7 @@ public class MultiSearchTemplateRequest extends ActionRequest<MultiSearchTemplat
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
-        in.readStreamableList(SearchTemplateRequest::new);
+        requests = in.readStreamableList(SearchTemplateRequest::new);
     }
 
     @Override

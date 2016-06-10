@@ -85,35 +85,35 @@ public class TransportSearchTemplateAction extends HandledTransportAction<Search
             BytesReference source = (BytesReference) executable.run();
             response.setSource(source);
 
-            if (request.isSimulate() == false) {
-                SearchRequest searchRequest = request.getRequest();
+            if (request.isSimulate()) {
+                listener.onResponse(response);
+                return;
+            }
 
-                try (XContentParser parser = XContentFactory.xContent(source).createParser(source)) {
-                    SearchSourceBuilder builder = SearchSourceBuilder.searchSource();
-                    builder.parseXContent(new QueryParseContext(queryRegistry, parser, parseFieldMatcher), aggsParsers, suggesters);
-                    searchRequest.source(builder);
+            // Executes the search
+            SearchRequest searchRequest = request.getRequest();
 
-                    searchAction.execute(searchRequest, new ActionListener<SearchResponse>() {
-                        @Override
-                        public void onResponse(SearchResponse searchResponse) {
-                            try {
-                                response.setResponse(searchResponse);
-                                listener.onResponse(response);
-                            } catch (Throwable t) {
-                                listener.onFailure(t);
-                            }
-                        }
+            try (XContentParser parser = XContentFactory.xContent(source).createParser(source)) {
+                SearchSourceBuilder builder = SearchSourceBuilder.searchSource();
+                builder.parseXContent(new QueryParseContext(queryRegistry, parser, parseFieldMatcher), aggsParsers, suggesters);
+                searchRequest.source(builder);
 
-                        @Override
-                        public void onFailure(Throwable t) {
+                searchAction.execute(searchRequest, new ActionListener<SearchResponse>() {
+                    @Override
+                    public void onResponse(SearchResponse searchResponse) {
+                        try {
+                            response.setResponse(searchResponse);
+                            listener.onResponse(response);
+                        } catch (Throwable t) {
                             listener.onFailure(t);
                         }
-                    });
-                } catch (IOException e) {
-                    listener.onFailure(e);
-                }
-            } else {
-                listener.onResponse(response);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        listener.onFailure(t);
+                    }
+                });
             }
         } catch (Throwable t) {
             listener.onFailure(t);

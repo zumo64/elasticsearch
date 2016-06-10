@@ -20,12 +20,11 @@
 package org.elasticsearch.action.search.template;
 
 import org.elasticsearch.action.ActionRequestBuilder;
-import org.elasticsearch.action.search.MultiSearchResponse;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.ElasticsearchClient;
 
 public class MultiSearchTemplateRequestBuilder
-        extends ActionRequestBuilder<MultiSearchTemplateRequest, MultiSearchResponse, MultiSearchTemplateRequestBuilder> {
+        extends ActionRequestBuilder<MultiSearchTemplateRequest, MultiSearchTemplateResponse, MultiSearchTemplateRequestBuilder> {
 
     protected MultiSearchTemplateRequestBuilder(ElasticsearchClient client, MultiSearchTemplateAction action) {
         super(client, action, new MultiSearchTemplateRequest());
