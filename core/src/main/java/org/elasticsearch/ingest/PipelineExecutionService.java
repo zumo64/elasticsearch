@@ -24,6 +24,7 @@ import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.cluster.ClusterChangedEvent;
 import org.elasticsearch.cluster.ClusterStateListener;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.metrics.CounterMetric;
 import org.elasticsearch.common.metrics.MeanMetric;
 import org.elasticsearch.common.util.concurrent.AbstractRunnable;
@@ -37,6 +38,9 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class PipelineExecutionService implements ClusterStateListener {
 
@@ -52,27 +56,46 @@ public class PipelineExecutionService implements ClusterStateListener {
     }
 
     public void executeIndexRequest(IndexRequest request, Consumer<Exception> failureHandler, Consumer<Boolean> completionHandler) {
-        Pipeline pipeline = getPipeline(request.getPipeline());
-        threadPool.executor(ThreadPool.Names.INDEX).execute(new AbstractRunnable() {
-
-            @Override
-            public void onFailure(Exception e) {
-                failureHandler.accept(e);
-            }
-
-            @Override
-            protected void doRun() throws Exception {
-                innerExecute(request, pipeline);
-                completionHandler.accept(true);
-            }
-        });
+        // we don't need this anymore as index api is a sugar api
     }
 
     public void executeBulkRequest(Iterable<DocWriteRequest> actionRequests,
                                    BiConsumer<IndexRequest, Exception> itemFailureHandler,
                                    Consumer<Exception> completionHandler) {
-        threadPool.executor(ThreadPool.Names.BULK).execute(new AbstractRunnable() {
+        Stream<Tuple<IndexRequest, String>> stream = StreamSupport.stream(actionRequests.spliterator(), false)
+            .filter(r -> r instanceof IndexRequest)
+            .map(r -> (IndexRequest) r)
+            .filter(indexRequest -> Strings.hasText(indexRequest.getPipeline()))
+            .map(indexRequest -> new Tuple<>(indexRequest, indexRequest.getPipeline()));
 
+        Function<IndexRequest, IngestDocument> ingestDocumentFactory = indexRequest -> {
+            String index = indexRequest.index();
+            String type = indexRequest.type();
+            String id = indexRequest.id();
+            String routing = indexRequest.routing();
+            String parent = indexRequest.parent();
+            Map<String, Object> sourceAsMap = indexRequest.sourceAsMap();
+            return new IngestDocument(index, type, id, routing, parent, sourceAsMap);
+        };
+
+        BiConsumer<IndexRequest, IngestDocument> postProcessor = (indexRequest, ingestDocument) -> {
+            Map<IngestDocument.MetaData, String> metadataMap = ingestDocument.extractMetadata();
+            //it's fine to set all metadata fields all the time, as ingest document holds their starting values
+            //before ingestion, which might also get modified during ingestion.
+            indexRequest.index(metadataMap.get(IngestDocument.MetaData.INDEX));
+            indexRequest.type(metadataMap.get(IngestDocument.MetaData.TYPE));
+            indexRequest.id(metadataMap.get(IngestDocument.MetaData.ID));
+            indexRequest.routing(metadataMap.get(IngestDocument.MetaData.ROUTING));
+            indexRequest.parent(metadataMap.get(IngestDocument.MetaData.PARENT));
+            indexRequest.source(ingestDocument.getSourceAndMetadata());
+        };
+        executeRequest(ThreadPool.Names.BULK, stream, ingestDocumentFactory, postProcessor, itemFailureHandler, completionHandler);
+    }
+
+    public <R> void executeRequest(String threadPoolName, Stream<Tuple<R, String>> requests,
+                                   Function<R, IngestDocument> ingestDocumentFactory, BiConsumer<R, IngestDocument> postProcessor,
+                                   BiConsumer<R, Exception> itemFailureHandler, Consumer<Exception> completionHandler) {
+        threadPool.executor(threadPoolName).execute(new AbstractRunnable() {
             @Override
             public void onFailure(Exception e) {
                 completionHandler.accept(e);
@@ -80,19 +103,15 @@ public class PipelineExecutionService implements ClusterStateListener {
 
             @Override
             protected void doRun() throws Exception {
-                for (DocWriteRequest actionRequest : actionRequests) {
-                    if ((actionRequest instanceof IndexRequest)) {
-                        IndexRequest indexRequest = (IndexRequest) actionRequest;
-                        if (Strings.hasText(indexRequest.getPipeline())) {
-                            try {
-                                innerExecute(indexRequest, getPipeline(indexRequest.getPipeline()));
-                                //this shouldn't be needed here but we do it for consistency with index api
-                                // which requires it to prevent double execution
-                                indexRequest.setPipeline(null);
-                            } catch (Exception e) {
-                                itemFailureHandler.accept(indexRequest, e);
-                            }
-                        }
+                Iterator<Tuple<R, String>> iterator = requests.iterator();
+                while (iterator.hasNext()){
+                    Tuple<R, String> tuple = iterator.next();
+                    R request = tuple.v1();
+                    Pipeline pipeline = getPipeline(tuple.v2());
+                    try {
+                        innerExecute(request, pipeline, ingestDocumentFactory, postProcessor);
+                    } catch (Exception e) {
+                        itemFailureHandler.accept(request, e);
                     }
                 }
                 completionHandler.accept(null);
@@ -142,7 +161,8 @@ public class PipelineExecutionService implements ClusterStateListener {
         }
     }
 
-    private void innerExecute(IndexRequest indexRequest, Pipeline pipeline) throws Exception {
+    private <R> void innerExecute(R request, Pipeline pipeline, Function<R, IngestDocument> ingestDocumentFactory,
+                                  BiConsumer<R, IngestDocument> postProcessor) throws Exception {
         if (pipeline.getProcessors().isEmpty()) {
             return;
         }
@@ -154,24 +174,9 @@ public class PipelineExecutionService implements ClusterStateListener {
         try {
             totalStats.preIngest();
             pipelineStats.ifPresent(StatsHolder::preIngest);
-            String index = indexRequest.index();
-            String type = indexRequest.type();
-            String id = indexRequest.id();
-            String routing = indexRequest.routing();
-            String parent = indexRequest.parent();
-            Map<String, Object> sourceAsMap = indexRequest.sourceAsMap();
-            IngestDocument ingestDocument = new IngestDocument(index, type, id, routing, parent, sourceAsMap);
+            IngestDocument ingestDocument = ingestDocumentFactory.apply(request);
             pipeline.execute(ingestDocument);
-
-            Map<IngestDocument.MetaData, String> metadataMap = ingestDocument.extractMetadata();
-            //it's fine to set all metadata fields all the time, as ingest document holds their starting values
-            //before ingestion, which might also get modified during ingestion.
-            indexRequest.index(metadataMap.get(IngestDocument.MetaData.INDEX));
-            indexRequest.type(metadataMap.get(IngestDocument.MetaData.TYPE));
-            indexRequest.id(metadataMap.get(IngestDocument.MetaData.ID));
-            indexRequest.routing(metadataMap.get(IngestDocument.MetaData.ROUTING));
-            indexRequest.parent(metadataMap.get(IngestDocument.MetaData.PARENT));
-            indexRequest.source(ingestDocument.getSourceAndMetadata());
+            postProcessor.accept(request, ingestDocument);
         } catch (Exception e) {
             totalStats.ingestFailed();
             pipelineStats.ifPresent(StatsHolder::ingestFailed);
@@ -213,6 +218,12 @@ public class PipelineExecutionService implements ClusterStateListener {
         IngestStats.Stats createStats() {
             return new IngestStats.Stats(ingestMetric.count(), ingestMetric.sum(), ingestCurrent.count(), ingestFailed.count());
         }
+
+    }
+
+    public interface Handler {
+
+        void handle() throws Exception;
 
     }
 
